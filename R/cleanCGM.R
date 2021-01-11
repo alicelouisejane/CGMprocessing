@@ -20,7 +20,7 @@ cleanCGM <- function(inputdirectory,
                              calibrationcheck=TRUE, sensortype="other", select7days=T) {
 
   # Set system locale to read all characters. Read in file list. Creat output
-
+  require(dplyr)
   files <- base::list.files(path = inputdirectory,full.names = TRUE)
   base::dir.create(outputdirectory,showWarnings = FALSE)
   dateparseorder <- c("mdy HM","mdy HMS","mdY HM","mdY HMS","dmy HM","dmy HMS",
@@ -175,7 +175,7 @@ cleanCGM <- function(inputdirectory,
 
 
     #for percentage wear work out sum of table before
-    totaltimebefore<-difftime(max(time$timestamp),min(time$timestamp),units="secs")
+    totaltimebefore<-difftime(max(table$timestamp),min(table$timestamp),units="secs")
 
 
     #################################calibration step ################################
@@ -307,7 +307,7 @@ cleanCGM <- function(inputdirectory,
     }
 
     #percentage cgm wear number of days wanted / number days collected
-    totaltimeafter<-difftime(max(time$timestamp),min(time$timestamp),units="secs")
+    totaltimeafter<-difftime(max(table$timestamp),min(table$timestamp),units="secs")
 
     totaltimebefore<-as.numeric(totaltimebefore)
     totaltimeafter<-as.numeric(totaltimeafter)

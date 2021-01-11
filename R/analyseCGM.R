@@ -21,13 +21,13 @@
 #' @examples
 #'
 #'
-cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputname,
+cgmanalysis2 <- function (exerciseanalysis=TRUE,inputdirectory,outputdirectory, patientdata, outputname,
                           awakeorsleepor24="24", aboveexcursionlength = 15, belowexcursionlength = 15,
                           magedef = "1sd", customintervals = list(NULL),
                           congan = 1, daystart = 06, dayend = 00, format = "rows",
                           printname = T) {
 
-  sink("extod_analysis_workflow.txt")
+  sink("extod_analysis_workflow_bydayafter12hoursexercise.txt")
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
   cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(files)))
   base::colnames(cgmupload) <- base::rep("Record", base::length(files))
@@ -78,10 +78,10 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
       next
     }
     #if there is less than 12 hours ie. every reading is 5mins there are 12 5mins in 1 hour, 144 readings are in 12 hours. Number of readings (worth 5 mins)/ number of 5 mins in 1 hour (12)
-    if (base::round(base::length(table$sensorglucose)/(3600/interval))<11 & !is.null(length(table$sensorglucose))){
-      print(base::paste(files[f],"not enought data"))
-      next
-    }
+    # if (base::round(base::length(table$sensorglucose)/(3600/interval))<11 & !is.null(length(table$sensorglucose))){
+    #   print(base::paste(files[f],"not enought data"))
+    #   next
+    # }
 
 
     #Total time in the dataset is the whole length of the dataset x 300 as each row represetns 300 seconds (5mins)
@@ -106,6 +106,9 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
     #
     #
 
+    if (exerciseanalysis==T){
+    cgmupload["dateofexercise", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][3]
+    }
 
     cgmupload["totaltime_mins", f] <- as.numeric(totaltime)/60
 
@@ -116,7 +119,7 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
 
     #this is the number of WHOLE DATES in the file. Not specific the actual amount of time, so would still count it as a day if it was half a day
     #cgmupload["num_days_good_data", f] <- table %>% dplyr::group_by(date) %>% dplyr::summarise(length(unique(table$date))) %>% dplyr::pull(2) %>% unlist() %>% .[1]
-    cgmupload["num_days_good_data", f] <- difftime(max(table$timestamp),min(table$timestamp),units="days")
+    cgmupload["num_days_good_data", f] <- difftime(max(table$timestamp),min(table$timestamp),units="days") #this should actually be total time /24*3600 for more accurate
     #this is more the true amount of time as it goes off specific hours
     cgmupload["num_hrs_good_data", f] <- base::round(unlist(totaltime)/3600)
 
@@ -161,13 +164,17 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
     #maximum reading
     cgmupload["max_sensor", f] <- base::round(base::max(table$sensorglucose[base::which(!is.na(table$sensorglucose))]), digits=2)
 
-
+require(dplyr)
     ###########Over 10mmol calcs##########
     #create a new df so not to mess up table for the other metrics
     table10<-table
+
+
     #put breaks (rows of NA) where there are non-consectuive timestamps (ie. after calibration when some dates have been removed)
     #this prevents excursions that were on one day running to another non-consective day if that day started >=10
+    #this also prevents interpolation over 20 min- would treat episodes >20 min as separate even if the rows are next to each other
     #table10$consecutive <- c(FALSE,diff(as.Date(table10$date))>1)
+
     table10$consecutive <- c(FALSE,diff(table10$timestamp)>1200)
 
     insertpostions10<-which(table10$consecutive %in% TRUE)
@@ -247,7 +254,9 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
     table13<-table
     #put breaks (rows of NA) where there are non-consectuive timestamps (ie. after calibration when some dates have been removed)
     #this prevents excursions that were on one day running to another non-consective day if that day started >=13
-    table13$consecutive <- c(FALSE,diff(as.Date(table13$date))>1)
+    #table13$consecutive <- c(FALSE,diff(as.Date(table13$date))>1)
+
+    table13$consecutive <- c(FALSE,diff(table13$timestamp)>1200)
     insertpostions13<-which(table13$consecutive %in% TRUE)
 
     if(length(insertpostions13)!=0){
@@ -326,7 +335,10 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
     table16<-table
     #put breaks (rows of NA) where there are non-consectuive timestamps (ie. after calibration when some dates have been removed)
     #this prevents excursions that were on one day running to another non-consective day if that day started >=13
-    table16$consecutive <- c(FALSE,diff(as.Date(table16$date))>1)
+    #table16$consecutive <- c(FALSE,diff(as.Date(table16$date))>1)
+
+    table16$consecutive <- c(FALSE,diff(table16$timestamp)>1200)
+
     insertpostions16<-which(table16$consecutive %in% TRUE)
 
     if(length(insertpostions16)!=0){
@@ -408,7 +420,7 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
     hypo<-table
     #put breaks (rows of NA) where there are non-consectuive timestamps (ie. after calibration when some dates have been removed)
     #this prevents excursions that were on one day running to another non-consective day if that day started >=13
-    hypo$consecutive <- c(FALSE,diff(as.Date(hypo$date))>1)
+    hypo$consecutive <- c(FALSE,diff(hypo$timestamp)>1200)
     insertpostionshypo<-which(hypo$consecutive %in% TRUE)
 
     #insertpostionshypo<-match(TRUE,hypo$consecutive)
@@ -646,19 +658,24 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
 
 
     # Calculate MAGE
-    # Smooth data using an exponentially weighted moving average, calculate SD of unsmoothed data.
+    # Smooth data using an exponentially weighted 9 point moving average, calculate SD of unsmoothed data.
+    if (base::round(base::length(table$sensorglucose)/(3600/interval))>12 & !is.null(length(table$sensorglucose))){
     table$smoothed <- base::as.numeric(zoo::rollapply(zoo::zoo(table$sensorglucose),
                                                       9, function(x) c(1, 2, 4, 8, 16, 8, 4, 2, 1) %*%
                                                         (x/46), fill = NA))
     table$smoothed[1:4] <- base::mean(stats::na.omit(table$sensorglucose[1:4]))
-    table$smoothed[(base::length(table$smoothed) - 3):base::length(table$smoothed)] <- base::mean(table$sensorglucose[(base::length(table$sensorglucose) -
-                                                                                                                         3):base::length(table$sensorglucose)])
+    table$smoothed[(base::length(table$smoothed) - 3):base::length(table$smoothed)] <- base::mean(table$sensorglucose[(base::length(table$sensorglucose) - 3):base::length(table$sensorglucose)])
+    # above is because smoothing doesnt work on first and last 4 values so sub in for their mean
+
+    # SD of the
     sd <- stats::sd(table$sensorglucose)
 
     # Identify turning points, peaks, and nadirs.
     tpoints <- pastecs::turnpoints(table$smoothed)
     peaks <- base::which(tpoints[["peaks"]] == TRUE)
     pits <- base::which(tpoints[["pits"]] == TRUE)
+
+    #if differecen between adjacent turning points are < 1sd (usually 1 but can be others) then it is not a turning point, so remove it
     # Calculate the difference between each nadir and its following peak. If the
     # data starts on a peak, remove it. Otherwise remove the final pit to create an even number of pits and peaks.
     if (tpoints[["firstispeak"]] == TRUE && base::length(peaks)!=base::length(pits)) {
@@ -679,6 +696,7 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
     }
     else {
       cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > magedef)])), digits=2)
+    }
     }
 
     #J-index:combination of information from mean and SD of all glucose values
@@ -717,10 +735,10 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
     a <- 1.026
     b <- 1.861
     y <- 1.794
-    table$gluctransform <- y * ((base::log(table$sensorglucose)^a)-b)
+    table$gluctransform2 <- y * ((base::log(table$sensorglucose)^a)-b) #brackets may be in the wrong place...
     table$rBG <- 10 * ((table$gluctransform)^2)
     rl <- table$rBG[base::which(table$gluctransform < 0)]
-    rh <- table$rBG[base::which(table$gluctransform > 0)] #manybe need it ≥0 not sure come back and check this
+    rh <- table$rBG[base::which(table$gluctransform > 0)]
     cgmupload["lbgi",f] <- base::round(base::mean(stats::na.omit(rl)), digits=2)
     cgmupload["hbgi",f] <- base::round(base::mean(stats::na.omit(rh)), digits =2)
 
@@ -739,11 +757,13 @@ cgmanalysis2 <- function (inputdirectory,outputdirectory, patientdata, outputnam
   filename <- base::paste0(outputdirectory,"CGM.data.only.", outputname ,".csv")
   utils::write.csv(cgmupload, file = filename,row.names = FALSE)
 
+#######################dont need this part really as can do merge with pataient data in analysis file
+  if(!is.na(patientdata)){
   patients<-utils::read.csv(patientdata, stringsAsFactors = FALSE,na.strings = c("NA", ""))
   cgmupload<-merge(patients, cgmupload, by="subject_id", all=F)
   filename <- base::paste0(outputdirectory,"CGM.data.patient.",outputname,".csv",sep = "")
   utils::write.csv(cgmupload, file = filename,row.names = FALSE)
-
+}
   closeAllConnections()
 }
 
