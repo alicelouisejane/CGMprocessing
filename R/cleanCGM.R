@@ -14,7 +14,6 @@
 #'
 #'
 
-
 cleanCGM <- function(inputdirectory,
                              outputdirectory = tempdir(),
                              calibrationcheck=TRUE, sensortype="other", select7days=T) {
