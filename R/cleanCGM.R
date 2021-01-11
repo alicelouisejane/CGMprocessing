@@ -2,7 +2,6 @@
 #'
 #' @param inputdirectory
 #' @param outputdirectory
-#' @param workflowname
 #' @param calibrationcheck
 #' @param sensortype
 #' @param select7days
@@ -11,7 +10,6 @@
 #' @export
 #'
 #' @examples
-#'
 #'
 
 cleanCGM <- function(inputdirectory,
@@ -31,6 +29,9 @@ cleanCGM <- function(inputdirectory,
     Id<-base::unlist(base::strsplit(tools::file_path_sans_ext(basename(files[f])),"_"))[1]
     table <- read.csv(files[f])
 
+
+    #other means ive ran it though split files function as there were dates in there that were not right start date. This need probably incuding in this whole function
+    #make this edit at some point
     if (sensortype=="dexcom") {
       table <- table[,c("Id","DisplayTime","Value","DisplayTime3","Value4")]
       base::colnames(table) <- c("id","timestampfp","fingerprickglucose","timestamp","sensorglucose")
@@ -151,7 +152,8 @@ cleanCGM <- function(inputdirectory,
 
     ################Calculate percentage expected wear##############################################
 
-    #percenageexpectedwear we expect them to have 7 days of data,
+    #percenageexpectedwear we expect them to have 7 days of data, for those that dont then this is possibly an error in data collection...
+    #take the first 7 days of data
     #Total time units in secs
     time<-table
     totaltime <- difftime(max(time$timestamp),min(time$timestamp),units="secs")
