@@ -87,6 +87,8 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
 
     if (exerciseanalysis == T) {
       cgmupload["dateofexercise", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][3]
+      cgmupload["pointafterexercise_hrs", f] <- table$cut_point
+      cgmupload["exercise_analysis_startpoint", f] <- table$exercise_point
     }
 
     cgmupload["totaltime_mins", f] <- as.numeric(totaltime) / 60
