@@ -1,30 +1,60 @@
-#' Title
+#' Generate CGM metrics of glycemia
 #'
-#' @param inputdirectory
-#' @param outputdirectory
-#' @param patientdata
-#' @param outputname
-#' @param awakeorsleepor24
-#' @param aboveexcursionlength
-#' @param belowexcursionlength
-#' @param magedef
-#' @param customintervals
-#' @param congan
-#' @param daystart
-#' @param dayend
-#' @param format
-#' @param printname
+#' @param exerciseanalysis Default is FALSE. In house development of time windowed exercise files.
+#' Format of these files is slightly different to the output files from [CGMprocessing::cleanCGM()] function
+#' @param libre For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
+#' Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method.
+#' ie. Every row there is an addition of 2 rows that are same as the original row.
+#' This is done in the [CGMprocessing::cleanCGM()] function. If specifed as TRUE the interval
+#' (which will appear 5 min due to dummy data) will be multiplied by 3 to give the original interval of the libre monitor
 #'
+#' @param inputdirectory path to folder containing files created by [CGMprocessing::cleanCGM()] function
+#'
+#' @param outputdirectory path to folder where output csv file will be uploaded
+#'
+#' @param outputname name of output file appended to CGM.data.only. use simple identifiers ie.studyname / timepoints
+#'
+#' @param awakeorsleepor24 (in development) Option of windowing data. Inputs
+#'  are the strings "awake" , "sleep" or "24". Default is 24
+#'
+#' @param aboveexcursionlength numeric for the time (in minutes) defined as an hyperglycemic exercusion
+#'  default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
+#'
+#' @param belowexcursionlength numeric for the time (in minutes) defined as an hypoglycemic exercusion
+#'  default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
+#'
+#' @param magedef Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward
+#' of all glycemic excursions exceeding the threshold (standard deviation of blood glucose obtained from all blood glucose
+#' concentrations within 24-hour period). Default is 1 standarddevation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd")
+#' or other can be specifed as a numeric
+#'
+#' @param congan Specificing the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
+#' of all valid differences between a current observation and an observation (n) hours earlier
+#'
+#' @param daystart Defining the hours of the start of a day for use in AUC calcualtion and windowing if using. Default is 06
+#'
+#' @param dayend Defining the hours of the end of a day for use in AUC calcualtion and windowing if using. Default is 00
+#'
+#' @param format changes format to CGM variables as x or y in table. Default is "rows" making each ID a row
+#'
+#' @param printname Prints name of the file being processed. Default is TRUE.
+#'
+#' @importFrom rio import export
+#' @importFrom dplyr mutate across contains if_else filter select ifelse
+#' @author Alice Carr
 #' @return
 #' @export
 #'
 #' @examples
+#' cgmanalysis2(F,F,"CGMprocessing/data-clean/","CGMprocessing/Upload","EXTOD")
 #'
-cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirectory, patientdata, outputname,
-                         awakeorsleepor24 = "24", aboveexcursionlength = 15, belowexcursionlength = 15,
-                         magedef = "1sd", customintervals = list(NULL),
-                         congan = 1, daystart = 06, dayend = 00, format = "rows",
-                         printname = T) {
+#'
+
+cgmanalysis2 <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
+                         outputname, awakeorsleepor24 = "24", aboveexcursionlength = 15,
+                         belowexcursionlength = 15, magedef = "1sd", congan = 1, daystart = 06,
+                         dayend = 00, format = "rows", printname = T) {
+
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
   cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(files)))
   base::colnames(cgmupload) <- base::rep("Record", base::length(files))
@@ -35,6 +65,7 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
   )
   allhours <- 0:23
   for (f in 1:base::length(files)) {
+    Id <- base::unlist(base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_"))[1]
     table <- utils::read.csv(files[f],
       stringsAsFactors = FALSE,
       na.strings = c("NA", "")
@@ -45,6 +76,8 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     if (printname == T) {
       print(basename(files[f]))
     }
+
+
 
     table$timestamp <- base::as.POSIXct(lubridate::parse_date_time(table$timestamp,
       dateparseorder,
@@ -75,6 +108,14 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     # if not enough data
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
+    if(libre==T & interval==900){
+      interval<- interval/3
+        # all sensor readings ensure there are "5min readings" for the analyseCGM function
+        table<-slice(table,rep(1:n(), each = 3))
+    }else if(libre==T & interval!=900){
+      table<-table
+    }
+
     # if there is no readings or 1 reading not enough data
     if (is.null(length(table$sensorglucose)) | length(table$sensorglucose) == 1 | length(table$sensorglucose) == 0) {
       print(base::paste(files[f], "not enought data"))
@@ -83,24 +124,45 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
 
     # Total time in the dataset is the whole length of the dataset x 300 as each row represetns 300 seconds (5mins)
     # this does not add in interpolation and only accounts for adds time that we have readings for
-    totaltime <- nrow(table) * 300
+    totaltime <- nrow(table) * interval
 
+    # this is for in house use with development ongoing
     if (exerciseanalysis == T) {
-      cgmupload["dateofexercise", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][3]
-      cgmupload["pointafterexercise_hrs", f] <- table$cut_point
-      cgmupload["exercise_analysis_startpoint", f] <- table$exercise_point
+      table$date<-as.Date(table$timestamp)
+      cgmupload["pointafterexercise_hrs", f] <- max(as.numeric(table$diff_disc))
+      cgmupload["num_exercise_days", f] <- length(unique(as.Date(table$timestamp))) # number of exercise days this glucose summary metrics are calculated on
+
+      #time in range for exercise 7-15 mmol/L from Lancet guidelines
+      exercisetime<- nrow(table[table$diff_disc==0,]) * 300
+      BGinrangeexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc==0)], length = 1)
+      BGinrangeexercise <- ifelse(BGinrangeexercise %in% seq(7, 15, 0.01), 1, 0)
+      cgmupload["min_spent_7_15_exercise", f] <-base::round(base::sum(BGinrangeexercise) * (interval / 60), digits = 2)
+      cgmupload["percent_time_7_15_exercise", f] <- base::round(((base::sum(BGinrangeexercise) * (interval / 60)) * 60 / exercisetime) * 100, digits = 2)
+      #recommended post exercise 5-12
+      postexercisetime<- nrow(table[table$diff_disc!=0,]) * 300
+      BGinrangepostexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc!=0)], length = 1)
+      BGinrangepostexercise <- ifelse(BGinrangepostexercise %in% seq(7, 15, 0.01), 1, 0)
+      cgmupload["min_spent_5_12_exercise", f] <-base::round(base::sum(BGinrangepostexercise) * (interval / 60), digits = 2)
+      cgmupload["percent_time_5_12_exercise", f] <- base::round(((base::sum(BGinrangepostexercise) * (interval / 60)) * 60 / postexercisetime) * 100, digits = 2)
+
     }
 
-    cgmupload["totaltime_mins", f] <- as.numeric(totaltime) / 60
-
     # Beginning of generation of table
+    cgmupload["totaltime_mins", f] <- as.numeric(totaltime) / 60
     cgmupload["start_cgm_analysis", f] <- base::as.character(min(table$timestamp, na.rm = T))
     cgmupload["end_cgm_analysis", f] <- base::as.character(max(table$timestamp, na.rm = T))
+
+    if(libre==T){
+    cgmupload["interval", f] <- interval*3
+    table$id<-Id
+    }else if(libre==F){
     cgmupload["interval", f] <- interval
+    }
 
     # this is the number of WHOLE DATES in the file. Not specific the actual amount of time, so would still count it as a day if it was half a day
     # cgmupload["num_days_good_data", f] <- table %>% dplyr::group_by(date) %>% dplyr::summarise(length(unique(table$date))) %>% dplyr::pull(2) %>% unlist() %>% .[1]
-    cgmupload["num_days_good_data", f] <- difftime(max(table$timestamp), min(table$timestamp), units = "days") # this should actually be total time /24*3600 for more accurate
+    cgmupload["num_days_good_data", f] <- base::round(unlist(totaltime) /(24*60*60)) # this should actually be total time /24*3600 for more accurate
+
     # this is more the true amount of time as it goes off specific hours
     cgmupload["num_hrs_good_data", f] <- base::round(unlist(totaltime) / 3600)
 
@@ -108,10 +170,13 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     cgmupload["total_sensor_readings", f] <- base::as.numeric(base::length(base::which(!is.na(table$sensorglucose))))
 
     # this was calculated in the calibration/file set up file and is a column in the read in file, take the first row
-    cgmupload["percentage_wear", f] <- table$percent_cgm_wear[1]
-    cgmupload["percentage_expected_wear", f] <- table$percentage_expected_wear[1]
-    cgmupload["percentage_expected_wear_aftersensorlifetimecutoff", f] <- table$percenageexpectedwear_7daycut[1]
-    # Average sensor glucose, interpolation of data may have to be before this step if we were to include it
+    if (exerciseanalysis == F) {
+    cgmupload["percentage_wear", f] <- ifelse(is.null(table$percent_cgm_wear[1]),NA,table$percent_cgm_wear[1])
+    cgmupload["percentage_expected_wear", f] <- ifelse(is.null(table$percentage_expected_wear[1]),NA,table$percentage_expected_wear[1])
+    cgmupload["percentage_expected_wear_aftersensorlifetimecutoff", f] <- ifelse(is.null(table$percenageexpectedwear_7daycut[1]),NA,table$percenageexpectedwear_7daycut[1])
+    }
+
+    # Average sensor glucose
     cgmupload["average_sensor", f] <- base::round(base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))], na.rm = T), digits = 2)
 
     # Hba1C equations uses glucose in mg/dl so convert it
@@ -145,6 +210,7 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     # maximum reading
     cgmupload["max_sensor", f] <- base::round(base::max(table$sensorglucose[base::which(!is.na(table$sensorglucose))]), digits = 2)
 
+
     require(dplyr)
     ########### Over 10mmol calcs##########
     # create a new df so not to mess up table for the other metrics
@@ -160,13 +226,14 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
 
     insertpostions10 <- which(table10$consecutive %in% TRUE)
     if (length(insertpostions10) != 0) {
-      table10 <- table10 %>% tibble::add_row(, .before = insertpostions10[1])
+      insertpostions10[1]<-insertpostions10-1
+      #table10 <- table10 %>% tibble::add_row(, .before = insertpostions10[1])
     } else {
       table10 <- table10
     }
     # missing variables means that they all will be given value of NA which is what we want
     if (length(insertpostions10) > 1) {
-      table10 <- berryFunctions::insertRows(table10, r = c(insertpostions10[-1]), new = NA, rcurrent = T)
+      table10 <- berryFunctions::insertRows(table10, r = c(insertpostions10), new = NA, rcurrent = T)
     }
 
     # make a new column for dealing with sensor glucose in this new df. Probs uneccesary but was helpful to debug
@@ -180,6 +247,7 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
         TRUE ~ 1
       ))
 
+
     # perform run length encoding to find "true" excursions that are >excursion length defined in function (15mins usually)
     BGover10 <- base::as.numeric(table10$BGover10, length = 1)
     BG10.rle <- base::rle(BGover10)
@@ -191,8 +259,9 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     over10loc <- as.data.frame(over10loc)
     over10loc$true <- ifelse(over10loc$lengths >= (((aboveexcursionlength * 60) / interval) + 1) & over10loc$values == 1, T, F)
 
-    # number of true excursions ie. >10 for ≥15mins
+    # number of true excursions >10 >15minsif gaps are >20 mins between consecutive excursiosn
     cgmupload["excursions_over_10", f] <- base::length(base::which(over10loc$true == T))
+
     # from the run length encoding find the positions where the true excursion started
     # and replace these values with a 1 in the new column which was replaced with the original sensor glucose values
     positions10 <- lag(over10loc$position)[which(over10loc$true == T)]
@@ -218,6 +287,7 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
       table10$BGover10 == 1 ~ 1,
       TRUE ~ 0
     )
+
 
     # count the time spend over 10
     # make a new array of the 0 and 1 BGover10 and then pad either end with 0s so this will always work if we end or start in a 1
@@ -245,13 +315,14 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     insertpostions13 <- which(table13$consecutive %in% TRUE)
 
     if (length(insertpostions13) != 0) {
-      table13 <- table13 %>% tibble::add_row(, .before = insertpostions13[1])
+      insertpostions13[1]<-insertpostions13-1
+     # table13 <- table13 %>% tibble::add_row(, .before = insertpostions13[1])
     } else {
       table13 <- table13
     }
     # missing variables means that they all will be given value of NA which is what we want
     if (length(insertpostions13) > 1) {
-      table13 <- berryFunctions::insertRows(table13, r = c(insertpostions13[-1]), new = NA, rcurrent = T)
+      table13 <- berryFunctions::insertRows(table13, r = c(insertpostions13), new = NA, rcurrent = T)
     }
 
     # make a new column for dealing with sensor glucose in this new df. Probs uneccesary but was helpful to debug
@@ -331,13 +402,14 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     insertpostions16 <- which(table16$consecutive %in% TRUE)
 
     if (length(insertpostions16) != 0) {
-      table16 <- table16 %>% tibble::add_row(, .before = insertpostions16[1])
+      insertpostions16[1]<-insertpostions16-1
+      #table16 <- table16 %>% tibble::add_row(, .before = insertpostions16[1])
     } else {
       table16 <- table16
     }
     # missing variables means that they all will be given value of NA which is what we want
     if (length(insertpostions16) > 1) {
-      table16 <- berryFunctions::insertRows(table16, r = c(insertpostions16[-1]), new = NA, rcurrent = T)
+      table16 <- berryFunctions::insertRows(table16, r = c(insertpostions16), new = NA, rcurrent = T)
     }
 
     # make a new column for dealing with sensor glucose in this new df. Probs uneccesary but was helpful to debug
@@ -417,14 +489,15 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
     insertpostionshypo <- which(hypo$consecutive %in% TRUE)
 
     # insertpostionshypo<-match(TRUE,hypo$consecutive)
-    if (length(insertpostionshypo) != 0) {
-      hypo <- hypo %>% tibble::add_row(, .before = insertpostionshypo[1])
+    if (length(insertpostionshypo) != 0){
+      insertpostionshypo[1]<-insertpostionshypo-1
+     # hypo <- hypo %>% tibble::add_row(, .before = insertpostionshypo[1])
     } else {
       hypo <- hypo
     }
     # missing variables means that they all will be given value of NA which is what we want
     if (length(insertpostionshypo) > 1) {
-      hypo <- berryFunctions::insertRows(hypo, r = c(insertpostionshypo[-1]), new = NA, rcurrent = T)
+      hypo <- berryFunctions::insertRows(hypo, r = c(insertpostionshypo), new = NA, rcurrent = T)
     }
 
     # make a new column for dealing with sensor glucose in this new df. Probs uneccesary but was helpful to debug
@@ -488,9 +561,9 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
       TRUE ~ 0
     ))
 
-    hypo$BGunder3 <- ifelse(is.na(hypo$id), 2.1, hypo$BGunder3)
+    hypo$BGunder3 <- ifelse(is.na(hypo$id), 2.1, hypo$BGunder3) #where there is gaps
 
-    # if there are 2s that follow straight after a 1 then turn all these 2s into a 1
+    # if there are 2s that follow straight after a 1 then turn all these 2s into a 1 (2s after a 1 represent <3.9 a hypo does not end until we are clear of 3.9 for 15mins)
     fill_in_2 <- function(prev, new) {
       if_else(new == 2 & prev == 1, 1, new)
     }
@@ -582,7 +655,11 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
       BGunder3 == 2 ~ 1,
       TRUE ~ BGunder3
     ))
-    hypo$BGunder3 <- ifelse(is.na(hypo$id), 0, hypo$BGunder3)
+
+    #if there is a gap in a hypo then the gap would be >20 mins long we have not done interpolation here therefore we cant assume hypo is the same one so we make the gap =0
+
+    hypo$BGunder3 <- ifelse(is.na(hypo$id),0,hypo$BGunder3)
+
 
     BG3.rle <- base::rle(base::as.numeric(hypo$BGunder3, length = 1))
     # the hypos picked up here will always be > excursion length as for loop from above found the "true" hypos but can keep this code in here just incase
@@ -678,8 +755,11 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
       # SD of the
       sd <- stats::sd(table$sensorglucose)
 
+
+      tryCatch({
       # Identify turning points, peaks, and nadirs.
       tpoints <- pastecs::turnpoints(table$smoothed)
+      }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
       peaks <- base::which(tpoints[["peaks"]] == TRUE)
       pits <- base::which(tpoints[["pits"]] == TRUE)
 
@@ -770,12 +850,5 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, inputdirectory, outputdirector
   filename <- base::paste0(outputdirectory, "CGM.data.only.", outputname, ".csv")
   utils::write.csv(cgmupload, file = filename, row.names = FALSE)
 
-  ####################### dont need this part really as can do merge with pataient data in analysis file
-  if (!is.na(patientdata)) {
-    patients <- utils::read.csv(patientdata, stringsAsFactors = FALSE, na.strings = c("NA", ""))
-    cgmupload <- merge(patients, cgmupload, by = "subject_id", all = F)
-    filename <- base::paste0(outputdirectory, "CGM.data.patient.", outputname, ".csv", sep = "")
-    utils::write.csv(cgmupload, file = filename, row.names = FALSE)
-  }
   closeAllConnections()
 }
