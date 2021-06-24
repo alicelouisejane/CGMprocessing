@@ -1,4 +1,4 @@
-#' Title
+#' Clean raw (or in house preprocessed) CGM files beofre analysis
 #'
 #' @param inputdirectory path to folder containing raw (or in house preprocessed) files. Prefered csv format but could read in others.
 
