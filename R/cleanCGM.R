@@ -1,21 +1,44 @@
 #' Title
 #'
-#' @param inputdirectory
-#' @param outputdirectory
-#' @param calibrationcheck
-#' @param sensortype
-#' @param select7days
+#' @param inputdirectory path to folder containing raw (or in house preprocessed) files. Prefered csv format but could read in others.
+
+#' @param outputdirectory path to folder where cleaned output files will be stored
+
+#' @param calibrationcheck Default TRUE. This calibration was sensor dependant (Dexcom G4) againsted logged fingerstick readings
+#'  and nearest 15 min later sensor reading. Calibration excluded 1) whole traces if 2 blood glucose calibrations were not
+#'  completed at the start of the sensor wear, 2) a day of wear if the MARD of the sensor glucose and blood glucose
+#'   calibration on that day is >20% or if <2 blood glucose calibrations were completes on that day. This can be set to false for CGM
+#'   without fingerstick calibration. Check if layout of input files is correct if using this calibration as TRUE
+
+#' @param sensortype Type of sensor used options are dexcom, libre or other. Default is other due to the nature of the files
+#'  having to be preprocessed due start date errors. Should set to dexcom or libre the raw csv files should be able to be read in.
+
+#' @param select7days Quirk of inhouse data was some data collection meant there were longer than 7 days of collection stored on the system
+#' we therefore use this to take the first 7 days of data if data was >8 days collected (accuracy of sensor decreases after 8 days)
 #'
+#' @param calibrationoutput if calibration check is TRUE ensure to have output directory for calibration files. This will output the
+#' calibration table of fingerstick matched to nearest 15 min later sensor glucose with the correlation
+#' (checking there were 2 fingersticks per day) and the MARD between the sensor and fingerstick
+#'
+#' @importFrom utils write.csv
+#' @importFrom rio import export
+#' @importFrom dplyr mutate across contains if_else filter select ifelse
+
+#' @author Alice Carr
 #' @return
 #' @export
 #'
 #' @examples
+#' cleanCGM("CGMprocessing/data-preprocessed/","CGMprocessing/data-clean",T,"other",T,"CGMprocessing/calibration")
 #'
+#'
+
+
 cleanCGM <- function(inputdirectory,
                      outputdirectory = tempdir(),
-                     calibrationcheck = TRUE, sensortype = "other", select7days = T) {
+                     calibrationcheck = TRUE, sensortype = "other", select7days = T, calibrationoutput = tempdir()) {
 
-  # Set system locale to read all characters. Read in file list. Creat output
+  #Read in file list. Create output
   require(dplyr)
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
   base::dir.create(outputdirectory, showWarnings = FALSE)
@@ -24,16 +47,14 @@ cleanCGM <- function(inputdirectory,
     "dmY HM", "dmY HMS", "Ymd HM", "Ymd HMS", "ymd HM", "ymd HMS",
     "Ydm HM", "Ydm HMS", "ydm HM", "ydm HMS"
   )
-  # Read in data, check CGM type.
-
+  # Read in data, depending on CGM type.
   for (f in 1:base::length(files)) {
     Id <- base::unlist(base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_"))[1]
-    table <- read.csv(files[f])
 
-
-    # other means ive ran it though split files function as there were dates in there that were not right start date. This need probably incuding in this whole function
-    # make this edit at some point
+    # other means ive ran it though split files function as there were dates in there that were not right start date.
+    #This is could be included in this function if a persistant error
     if (sensortype == "dexcom") {
+      table <-  rio::import(files[f], guess_max = 10000000)
       table <- table[, c("Id", "DisplayTime", "Value", "DisplayTime3", "Value4")]
       base::colnames(table) <- c("id", "timestampfp", "fingerprickglucose", "timestamp", "sensorglucose")
       table$id <- Id
@@ -55,17 +76,18 @@ cleanCGM <- function(inputdirectory,
       table$fingerprickglucose <-
         base::suppressWarnings(base::round(base::as.numeric(table$fingerprickglucose), digits = 2))
     } else if (sensortype == "libre") {
+      table <-  rio::import(files[f], skip =2 ,guess_max = 10000000)
       table <- table[, c(
-        "Serial Number",
-        "Meter Timestamp",
-        "Record Type",
-        "Historic Glucose(mmol/L)",
-        "Scan Glucose(mmol/L)"
+        "Serial.Number",
+        "Meter.Timestamp",
+        "Record.Type",
+        "Historic.Glucose.mmol.L.",
+        "Scan.Glucose.mmol.L."
       )]
 
       table$id <- Id
-      table$sensorglucose <- ifelse(table$`Record Type` == 1, table$`Scan Glucose(mmol/L)`, table$`Historic Glucose(mmol/L)`)
-      base::colnames(table) <- c("id", "timestamp", "recordtype", "sensorglucose", "scanglucose")
+      #table$sensorglucose <- ifelse(table$`Record.Type` == 1, table$`Scan.Glucose.mmol.L.`, table$`Historic.Glucose.mmol.L.`)
+      table <- rename(table,c("timestamp"="Meter.Timestamp", "sensorglucose"="Historic.Glucose.mmol.L."))
       table <- table[, c("id", "timestamp", "sensorglucose")]
       table$sensorglucose <- as.character(table$sensorglucose)
       base::suppressWarnings(
@@ -75,15 +97,13 @@ cleanCGM <- function(inputdirectory,
           TRUE ~ table$sensorglucose
         ))
       )
+      #adds dummy 5 min data by adding 2 rows after every original row that is the same as he original row
+      table<-slice(table,rep(1:n(), each = 3))
 
-      insert.df1 <- transform(orig.df, timestamp = timestamp + 300)
-      out.df1 <- rbind(orig.df, insert.df)
-
-      insert.df2 <- transform(orig.df, timestamp = timestamp + 300)
-      out.df2 <- rbind(out.df1, insert.df2)
-
-      # other means ive ran it though split files function as there were dates in there that were not right start date. This need probably incuding in this whole function
+      # sensor type other means ive ran it though split files function as there were dates in there that were not right start date.
+      #This need probably incuding in this whole function
     } else if (sensortype == "other") {
+      table <- read.csv(files[f])
       table <- table[, c("id", "timestampfp", "fingerprickglucose", "timestamp", "sensorglucose")]
       table$timestampfp <- base::as.POSIXct(lubridate::parse_date_time(
         table$timestampfp,
@@ -110,7 +130,6 @@ cleanCGM <- function(inputdirectory,
       dateparseorder
     ), tz = "UTC")
 
-
     table$sensorglucose <-
       base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
     table <- table[base::order(table$timestamp), ]
@@ -121,73 +140,49 @@ cleanCGM <- function(inputdirectory,
 
     removaltime <- base::as.POSIXlt(max(table$timestamp), tz = "UCT", format = "%m/%d/%Y %H:%M:%OS")
 
-
-    # Set interval based on mode of timestamp diff.
+    # Set interval based on mode of timestamp diff. this should always be 5 mins / 300s
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
 
-
-    # split time into windows
-    table$h <- substring(table$timestamp, 12)
-    table$h <- lubridate::parse_date_time(table$h, "HMS")
-
-    a <- table$h >= lubridate::parse_date_time("00:00:00", "HMS") & table$h < lubridate::parse_date_time("06:00:00", "HMS")
-    b <- table$h >= lubridate::parse_date_time("06:00:00", "HMS") & table$h < lubridate::parse_date_time("12:00:00", "HMS")
-    c <- table$h >= lubridate::parse_date_time("12:00:00", "HMS") & table$h < lubridate::parse_date_time("18:00:00", "HMS")
-    d <- table$h >= lubridate::parse_date_time("18:00:00", "HMS") & table$h < lubridate::parse_date_time("24:00:00", "HMS")
-
-    table <- cbind(table, a, b, c, d)
-
-    table$group <- factor(1 * a + 2 * b + 3 * c + 4 * d)
-    table$group <- as.character(table$group)
-    table <- table %>% dplyr::mutate(group = dplyr::case_when(
-      group == "1" ~ "0000-0600",
-      group == "2" ~ "0600-1200",
-      group == "3" ~ "1200-1800",
-      group == "4" ~ "1800-0000",
-      TRUE ~ table$group
-    ))
-
-    table$h <- NULL
-    table$a <- NULL
-    table$b <- NULL
-    table$c <- NULL
-    table$d <- NULL
-
-
+    # prints dates in each file for debugging
     printdates <- as.Date(table$timestamp)
     print(base::paste(files[f], "=", unique(printdates), sep = ""))
 
 
     ################ Calculate percentage expected wear##############################################
 
-    # percenageexpectedwear we expect them to have 7 days of data, for those that dont then this is possibly an error in data collection...
+    # percenageexpectedwear we expect them to have 7 days of data if a CGM
+    # for those that dont then this is possibly an error in data collection...
     # take the first 7 days of data
     # Total time units in secs
     time <- table
     totaltime <- difftime(max(time$timestamp), min(time$timestamp), units = "secs")
     totaltime <- as.numeric(totaltime)
     totaltimedays <- difftime(max(time$timestamp), min(time$timestamp), units = "days")
+
+    #percentage expected wear without cutting at 7 days
     percenageexpectedwear <- ((totaltime / 86400) / 7) * 100
 
-
+    # Selects the first 7 days of wear
     if (select7days == T) {
       if (totaltimedays > 8) {
         table <- time %>% filter(dplyr::between(as.Date(timestamp), as.Date(recordstart), as.Date(recordstart) + lubridate::days(7)))
-      } else {
+        #percentage expected wear cutting at 7 days (if select 7 days )
+        totaltime7datcut <- difftime(max(table$timestamp), min(table$timestamp), units = "secs")
+        totaltime7datcut <- as.numeric(totaltime7datcut)
+        totaltime7datcutdays <- difftime(max(table$timestamp), min(table$timestamp), units = "days")
+        percenageexpectedwear_7daycut <- ((totaltime7datcut / 86400) / 7) * 100
+
+         } else {
         table <- time
+        percenageexpectedwear_7daycut <- NA
       }
     }
-    totaltime7datcut <- difftime(max(table$timestamp), min(table$timestamp), units = "secs")
-    totaltime7datcut <- as.numeric(totaltime7datcut)
-    totaltime7datcutdays <- difftime(max(table$timestamp), min(table$timestamp), units = "days")
-    percenageexpectedwear_7daycut <- ((totaltime7datcut / 86400) / 7) * 100
-
-
-    # for percentage wear work out sum of table before
-    totaltimebefore <- difftime(max(table$timestamp), min(table$timestamp), units = "secs")
-
 
     ################################# calibration step ################################
+
+    # for percentage of data kept post calibration work out sum of table before
+    totaltimebefore <- difftime(max(table$timestamp), min(table$timestamp), units = "secs")
+
 
     # Dexcom G4 sensor this is always true
     if (calibrationcheck == TRUE) {
@@ -255,13 +250,13 @@ cleanCGM <- function(inputdirectory,
 
       quality <- Reduce(function(x, y) merge(x, y, by = "Date", all = TRUE), list(correlation, MD))
 
-      ########################################## Changed clalibration value#########################################
+      ########################################## can change calibration value#########################################
       quality$remove <- ifelse(quality$coef == 0 | quality$MD > 20, 1, 0)
 
       # dates that werent included as not first 7 days data removed from calibration summary table
       if (select7days == T) {
         if (totaltimedays > 8) {
-          quality <- quality %>% filter(dplyr::between(Date, Date, Date + lubridate::days(7)))
+          quality <- quality %>% filter(dplyr::between(Date, Date + lubridate::days(7)))
         } else {
           quality <- quality
         }
@@ -269,7 +264,6 @@ cleanCGM <- function(inputdirectory,
 
       # Inclusion critera:
       # If MAD >20 remove all from this date or they did not have 2 SMBG on this date (ie the coeefcient would be 0)
-      # Mean abs difference needs to be <28% (Angus paper)
 
       # Find dates that dont fit this inclusion criteria and make df of these called remove
       remove <- quality %>%
@@ -296,28 +290,39 @@ cleanCGM <- function(inputdirectory,
       next
     }
 
-    # percentage cgm wear number of days wanted / number days collected
+    # data left post calibrtion
     totaltimeafter <- difftime(max(table$timestamp), min(table$timestamp), units = "secs")
 
     totaltimebefore <- as.numeric(totaltimebefore)
     totaltimeafter <- as.numeric(totaltimeafter)
 
     percent_cgm_wear <- (totaltimeafter / totaltimebefore) * 100
+
+    #amount of data left post calibration
     table$percent_cgm_wear <- percent_cgm_wear
+    #amount of data collected out of 7 days
     table$percentage_expected_wear <- percenageexpectedwear
+
+    if (select7days == T) {
+      if (totaltimedays > 8) {
     table$percenageexpectedwear_7daycut <- percenageexpectedwear_7daycut
     table$totaltime7datcutdays <- as.numeric(totaltime7datcutdays)
+      } else {
+        table$percenageexpectedwear_7daycut <- NA
+        table$totaltime7datcutdays <- NA
+      }
+    }
 
     # prints out percentage wear in command prompt
     print(base::paste(files[f], "=", percent_cgm_wear, sep = ""))
     table$Date <- as.Date(table$timestamp)
-    tableout <- table[, c("id", "timestamp", "sensorglucose", "group", "Date", "percent_cgm_wear", "percentage_expected_wear", "percenageexpectedwear_7daycut")]
+    tableout <- table[, c("id", "timestamp", "sensorglucose", "Date", "percent_cgm_wear", "percentage_expected_wear", "percenageexpectedwear_7daycut")]
 
     filename <- base::paste0(outputdirectory, "/", basename(files[f]))
     utils::write.csv(tableout, file = filename, row.names = FALSE)
     if (calibrationcheck == T) {
-      filenamecalibration <- base::paste("calibration", "/", base::unlist(tools::file_path_sans_ext(basename(files[f]))), "_calibration.csv", sep = "")
-      # utils::write.csv(quality,file = filenamecalibration,row.names = FALSE)
+      base::dir.create(calibrationoutput, showWarnings = FALSE)
+      filenamecalibration <- base::paste(calibrationoutput, base::unlist(tools::file_path_sans_ext(basename(files[f]))), "_calibration.csv", sep = "")
       utils::write.csv(quality, filenamecalibration, row.names = FALSE)
     }
   }
