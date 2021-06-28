@@ -33,13 +33,13 @@
 #'
 #'
 
-
+inputdirectory<-"LiverpoolData/data-clean/"
 cleanCGM <- function(inputdirectory,
                      outputdirectory = tempdir(),
                      calibrationcheck = TRUE, sensortype = "other", select7days = T, calibrationoutput = tempdir()) {
 
   #Read in file list. Create output
-  require(dplyr)
+
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
   base::dir.create(outputdirectory, showWarnings = FALSE)
   dateparseorder <- c(
@@ -47,18 +47,29 @@ cleanCGM <- function(inputdirectory,
     "dmY HM", "dmY HMS", "Ymd HM", "Ymd HMS", "ymd HM", "ymd HMS",
     "Ydm HM", "Ydm HMS", "ydm HM", "ydm HMS"
   )
+  #cgm variable dictionary
+  cgm_dict<-rio::import("cgmvariable_dictionary.xlsx")
   # Read in data, depending on CGM type.
   for (f in 1:base::length(files)) {
+
+    #id from filename
     Id <- base::unlist(base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_"))[1]
 
     # other means ive ran it though split files function as there were dates in there that were not right start date.
     #This is could be included in this function if a persistant error
     if (sensortype == "dexcom") {
       table <-  rio::import(files[f], guess_max = 10000000)
-      table <- table[, c("Id", "DisplayTime", "Value", "DisplayTime3", "Value4")]
-      base::colnames(table) <- c("id", "timestampfp", "fingerprickglucose", "timestamp", "sensorglucose")
+      names(table)<- tolower(names(table))
+      colnames(table) <- dplyr::recode(
+        colnames(table),
+          !!!setNames(as.character(cgm_dict$new_vars), cgm_dict$old_vars)
+      )
+      vars_to_keep <- intersect(names(table), unique(cgm_dict$new_vars))
+      table<-dplyr::select(table,all_of(vars_to_keep))
+      #chnage sensor id to be patient id
       table$id <- Id
-      require(dplyr)
+
+      #change instances of low/ high to sensor limits
       table$sensorglucose <- as.character(table$sensorglucose)
       base::suppressWarnings(
         table <- table %>% dplyr::mutate(sensorglucose = dplyr::case_when(
@@ -67,6 +78,8 @@ cleanCGM <- function(inputdirectory,
           TRUE ~ table$sensorglucose
         ))
       )
+
+      # date time conversion
       table$timestampfp <- base::as.POSIXct(lubridate::parse_date_time(
         table$timestampfp,
         dateparseorder
@@ -75,20 +88,19 @@ cleanCGM <- function(inputdirectory,
 
       table$fingerprickglucose <-
         base::suppressWarnings(base::round(base::as.numeric(table$fingerprickglucose), digits = 2))
+
     } else if (sensortype == "libre") {
       table <-  rio::import(files[f], skip =2 ,guess_max = 10000000)
-      table <- table[, c(
-        "Serial.Number",
-        "Meter.Timestamp",
-        "Record.Type",
-        "Historic.Glucose.mmol.L.",
-        "Scan.Glucose.mmol.L."
-      )]
-
+      names(table)<- tolower(names(table))
+      colnames(table) <- dplyr::recode(
+        colnames(table),
+        !!!setNames(as.character(cgm_dict$new_vars), cgm_dict$old_vars)
+      )
       table$id <- Id
-      #table$sensorglucose <- ifelse(table$`Record.Type` == 1, table$`Scan.Glucose.mmol.L.`, table$`Historic.Glucose.mmol.L.`)
-      table <- rename(table,c("timestamp"="Meter.Timestamp", "sensorglucose"="Historic.Glucose.mmol.L."))
-      table <- table[, c("id", "timestamp", "sensorglucose")]
+      vars_to_keep <- intersect(names(table), unique(cgm_dict$new_vars))
+      table<-dplyr::select(table,all_of(vars_to_keep))
+      #keep commented out until gap interpolation is solved
+      #table$sensorglucose <- ifelse(table$`recordtype` == 1, table$`scanglucose`, table$`sensorglucose`)
       table$sensorglucose <- as.character(table$sensorglucose)
       base::suppressWarnings(
         table <- table %>% dplyr::mutate(sensorglucose = dplyr::case_when(
@@ -97,7 +109,10 @@ cleanCGM <- function(inputdirectory,
           TRUE ~ table$sensorglucose
         ))
       )
-      #adds dummy 5 min data by adding 2 rows after every original row that is the same as he original row
+
+
+      #adds dummy 5 min data by adding 2 rows after every original row that is the same as the original row
+      # FOR DEVELOPMENT- here we could look at interpolation of data only interpolating up to 20mins of gap perhaps
       table<-slice(table,rep(1:n(), each = 3))
 
       # sensor type other means ive ran it though split files function as there were dates in there that were not right start date.
