@@ -161,7 +161,9 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outpu
 
     # this is the number of WHOLE DATES in the file. Not specific the actual amount of time, so would still count it as a day if it was half a day
     # cgmupload["num_days_good_data", f] <- table %>% dplyr::group_by(date) %>% dplyr::summarise(length(unique(table$date))) %>% dplyr::pull(2) %>% unlist() %>% .[1]
-    cgmupload["num_days_good_data", f] <- base::round(unlist(totaltime) /(24*60*60)) # this should actually be total time /24*3600 for more accurate
+
+    # this should actually be total time /24*3600 for more accurate day count
+     cgmupload["num_days_good_data", f] <- base::round(unlist(totaltime) /(24*60*60))
 
     # this is more the true amount of time as it goes off specific hours
     cgmupload["num_hrs_good_data", f] <- base::round(unlist(totaltime) / 3600)
