@@ -4,7 +4,7 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r setup, include = FALSE}
+```{r, echo= FALSE, include = FALSE}
 
 ## Installing required packages for this template
 required_packages <- c(
@@ -63,8 +63,7 @@ rio::import("cgmvariable_dictionary.xlsx") %>%
   flextable::flextable() %>% 
   flextable::merge_v(j = ~ old_vars + new_vars) %>% 
   flextable::theme_vanilla() %>% 
-  flextable::autofit() %>% 
-  flextable::as_raster()
+  flextable::autofit() 
 
 ```
 - Files from preprocessing are outputted with changed CGM variable names already and reformatted slightly (conversion of HI/LO etc.) compared to raw data as below:
@@ -75,8 +74,7 @@ rio::import("cgmvariable_dictionary.xlsx") %>%
 rio::import("dummy_data.xlsx", which = "preprocessoutput") %>% head() %>%
   flextable::flextable() %>% 
   flextable::theme_vanilla() %>% 
-  flextable::autofit() %>% 
-  flextable::as_raster()
+  flextable::autofit() 
 
 ```
 
@@ -100,16 +98,15 @@ rio::import("dummy_data.xlsx", which = "preprocessoutput") %>% head() %>%
 
 ---
 **_FOR DEVELOPMENT_**
-Libre sensors store glucose every 15 mins, in order for analyseCGM to work based consensus CGM analysis [here](https://care.diabetesjournals.org/content/40/12/1631) we must make the 15 min intervaltimeseries data into 5 min interval data. Currently cleanCGM() handles this with the line: 
+Libre sensors store glucose every 15 mins, in order for analyseCGM to work based consensus CGM analysis [here](https://care.diabetesjournals.org/content/40/12/1631) we must make the 15 min intervaltimeseries data into 5 min interval data. Currently cleanCGM() handles this with the line below, adding dummy 5 min data by adding 2 rows after every original row that is the same as the original row : 
 
 ```{r eval=FALSE, echo=T}
 table<-slice(table,rep(1:n(), each = 3))
 ```
 
-Adding dummy 5 min data by adding 2 rows after every original row that is the same as the original row.
 ---
 
-- Each file outputed should look like 
+- Each file outputed should look like the belwo table:
 
 **Table**: Cleaned CGM output
 ```{r cleancgm, echo = FALSE}
@@ -117,8 +114,7 @@ Adding dummy 5 min data by adding 2 rows after every original row that is the sa
 rio::import("dummy_data.xlsx", which = "cgmcleanoutput") %>% head() %>%
   flextable::flextable() %>% 
   flextable::theme_vanilla() %>% 
-  flextable::autofit() %>% 
-  flextable::as_raster()
+  flextable::autofit()
 
 ```
 
@@ -151,14 +147,13 @@ ___
 
 - There is an option for exercise analysis specified in this function specific to in house Exeter/Liverpool processing of data. This additional option was used to analyse specific files of exercise aligned glucose that were not ran through the cleanCGM() function.
 
-
+- All CGM variables generated are detailed  below: 
 **Table**: CGM metrics generated for each individual
 ```{r analysecgm, echo = FALSE}
 
 rio::import("dummy_data.xlsx", which = "analysecgmoutput") %>% 
   flextable::flextable() %>% 
   flextable::theme_vanilla() %>% 
-  flextable::autofit() %>% 
-  flextable::as_raster()
+  flextable::autofit()
 
 ```
