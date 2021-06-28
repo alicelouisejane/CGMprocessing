@@ -4,7 +4,7 @@ output: github_document
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, echo= FALSE, include = FALSE}
+```{r, echo= FALSE}
 
 ## Installing required packages for this template
 required_packages <- c(
