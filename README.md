@@ -1,10 +1,11 @@
 ---
+title: "CGMProcessing Scripts"
+author: "Alice Carr"
 output: github_document
 ---
-
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-```{r, echo= FALSE}
+```{r setup, echo= F,include = FALSE}
 
 ## Installing required packages for this template
 required_packages <- c(
@@ -26,8 +27,6 @@ for (pkg in required_packages) {
 
 ```
 
-# CGMprocessing
-
 <!-- badges: start -->
 <!-- badges: end -->
 
@@ -36,7 +35,6 @@ The goal of {CGMprocessing} is to provide functions for preparing, cleaning and 
 Glycemic variables and definitions are based off the [International Concensus on Use of Continuous Gucose Monitoring](https://care.diabetesjournals.org/content/40/12/1631).
 
 This code was developed based off work by [T. Vigers](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0216851)
-
 
 
 ## File Structure
@@ -48,7 +46,7 @@ This code was developed based off work by [T. Vigers](https://journals.plos.org/
 **Important** As this was developed for analysis of RCT data files preprocessed are outputted with the filename formatted as **ID_timepoint.csv** based on the excel sheet name. If dealing with RCT data please ensure files are named in this way before running through cleanCGM() and analyseCGM() pipeline. Edit scripts if neccesary if not dealing with RCT data 
 
 
-## Pre-processing of CGM files (Relavent to Exeter in house data)
+## Pre-processing of CGM files (Relevent to Exeter in house data)
 
 The script **prepare_spitsheets.R** is a rough script pipeline (non-function) that prepares files from EXTOD and EXTOD education for further processing with functions part of {CGMprocessing}. 
 
@@ -57,7 +55,7 @@ The script **prepare_spitsheets.R** is a rough script pipeline (non-function) th
 - **cgmvariable_dictionary.xlsx** is used to rename variables of interest. This could be updated for variable names of other sensors and integrated into cleanCGM() function
 
 
-**Table**: Dictionary for renaming old variables in raw CGM data files
+**Table**: Dictionary for renaming old variables in raw CGM data files, edit as required
 ```{r cgmvariable_dictionary, echo = FALSE}
 rio::import("cgmvariable_dictionary.xlsx") %>% 
   flextable::flextable() %>% 
@@ -80,7 +78,7 @@ rio::import("dummy_data.xlsx", which = "preprocessoutput") %>% head() %>%
 
 - Files are named as **ID_timepoint.csv** based on the excel sheet name
 
--**Important**: Glucose readings must be in mmmol/l. Manually change files in raw excel files. More information on conversion found [here](https://www.diabetes.co.uk/blood-sugar-converter.html)
+_**Important**:_ Glucose readings must be in mmmol/l. Manually change files in raw excel files. More information on conversion found [here](https://www.diabetes.co.uk/blood-sugar-converter.html)
 
 
 ## cleanCGM
@@ -88,7 +86,7 @@ rio::import("dummy_data.xlsx", which = "preprocessoutput") %>% head() %>%
 **Functionality:** **cleanCGM()** is a function written to clean CGM data for simpler file outputs and perform (optional) calibration against fingerstick SMBG values developed of Dexcom G4 data. 
 
 - Function can take raw files from Dexcom, Libre or previosuly preprocessed from an input folder directory. Files can be of any format, csv is preferred.
-**Important** Files should be named as **ID_optional.ext**
+_**Important**:_  Files should be named as **ID_optional.ext**
 
 - Text Low/High are in filled with the min/max limits depending on the inputted sensor type
 
