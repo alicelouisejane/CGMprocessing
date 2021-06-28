@@ -48,7 +48,7 @@ This code was developed based off work by [T. Vigers](https://journals.plos.org/
 **Important** As this was developed for analysis of RCT data files preprocessed are outputted with the filename formatted as **ID_timepoint.csv** based on the excel sheet name. If dealing with RCT data please ensure files are named in this way before running through cleanCGM() and analyseCGM() pipeline. Edit scripts if neccesary if not dealing with RCT data 
 
 
-## Pre-processing of CGM files (Relevent to Exeter in house data)
+## Pre-processing of CGM files (Relavent to Exeter in house data)
 
 The script **prepare_spitsheets.R** is a rough script pipeline (non-function) that prepares files from EXTOD and EXTOD education for further processing with functions part of {CGMprocessing}. 
 
@@ -106,7 +106,7 @@ Libre sensors store glucose every 15 mins, in order for analyseCGM to work based
 table<-slice(table,rep(1:n(), each = 3))
 ```
 
-Adding dummy 5 min data by adding 2 rows after every original row that is the same as the original row._
+Adding dummy 5 min data by adding 2 rows after every original row that is the same as the original row.
 ---
 
 - Each file outputed should look like 
