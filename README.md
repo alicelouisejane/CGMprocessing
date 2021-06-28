@@ -1,8 +1,8 @@
----
-title: "CGMProcessing Scripts"
-author: "Alice Carr"
-output: github_document
----
+# ---
+# title: "CGMProcessing Scripts"
+# author: "Alice Carr"
+# output: github_document
+# ---
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
 ```{r setup, echo= F,include = FALSE}
@@ -26,7 +26,7 @@ for (pkg in required_packages) {
 }
 
 ```
-
+# CGMProcessing
 <!-- badges: start -->
 <!-- badges: end -->
 
