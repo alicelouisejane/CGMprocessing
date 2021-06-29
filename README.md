@@ -1,6 +1,3 @@
-CGMProcessing Scripts
-================
-Alice Carr
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
@@ -19,7 +16,7 @@ This code was developed based off work by [T. Vigers](https://journals.plos.org/
 - **/data-raw**: raw data from sensor
 - **/data-preprocessed**: Exeter specific preprocessed data from sensor
 - **/data-clean**: data ran through cleanCGM() function
-- **/CGMupload**: Output csv of analysed CGM data with glycemic metrics generated
+- **/CGMupload**: Output csv of glycemic metrics generated from analysedCGM() function  
 
 ❗**Important**: As this was developed for analysis of RCT data files preprocessed are outputted with the filename formatted as _ID_timepoint.csv_ based on the excel sheet name. If dealing with RCT data please ensure files are named in this way before running through cleanCGM() and analyseCGM() pipeline. Edit scripts if neccesary if not dealing with RCT data❗
 
