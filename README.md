@@ -94,14 +94,12 @@ ___
 -If calibration check is TRUE then the calibration table of fingerstick SMBG matched to nearest 15 min later sensor glucose with the correlation (checking there were 2 fingersticks per day) and the MARD between the sensor and fingerstick with be output to the specified calibrationoutput directory
 
 ---
-👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️
-**_FOR DEVELOPMENT_**
-_Libre sensors store glucose every 15 mins, in order for analyseCGM to work based consensus CGM analysis [here](https://care.diabetesjournals.org/content/40/12/1631) we must make the 15 min intervaltimeseries data into 5 min interval data. Currently cleanCGM() handles this with the line below, adding dummy 5 min data by adding 2 rows after every original row that is the same as the original row :_ 
+👷‍♀️ **_FOR DEVELOPMENT_**👷‍:_Libre sensors store glucose every 15 mins, in order for analyseCGM to work based consensus CGM analysis [here](https://care.diabetesjournals.org/content/40/12/1631) we must make the 15 min intervaltimeseries data into 5 min interval data. Currently cleanCGM() handles this with the line below, adding dummy 5 min data by adding 2 rows after every original row that is the same as the original row :_ 
 
 ```{r eval=FALSE, echo=T}
 table<-slice(table,rep(1:n(), each = 3))
 ```
-👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️👷‍♀️
+
 ---
 
 - Each file outputed should look like the below table:
@@ -120,7 +118,7 @@ table<-slice(table,rep(1:n(), each = 3))
 
 ## analyseCGM
 ___
-**Functionality:** **analyseCGM()** is a function written to create Concensus glycemic metrics based off definitions outlined [here](https://care.diabetesjournals.org/content/40/12/1631). Fuction takes files from the **data-clean** folder where the output of cleanCGM() is stored.
+**Functionality:** **analyseCGM()** is a function written to create concensus glycemic metrics based off definitions outlined [here](https://care.diabetesjournals.org/content/40/12/1631). Fuction takes files from the **data-clean** folder where the output of cleanCGM() is stored.
 ___
 
 🖋️ **NOTE**: There is an paramater for exercise analysis specified in this function specific to in house Exeter/Liverpool processing of data. This additional option is used to analyse specific files of exercise aligned glucose that were not ran through the cleanCGM() function. Keep parameter as FALSE.🖋️
