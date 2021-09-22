@@ -27,7 +27,37 @@ ___
 **Functionality**: The script **prepare_spitsheets.R** is a rough script pipeline (non-function) that prepares files from EXTOD and EXTOD education for further processing with functions part of {CGMprocessing}. Chunks of traces with non-consecutive dates are separated with **wrongstart** appended to traces prior to the final consecutive chunk. The final chunk with consecutive dates is outputted to **/data-preprocessed**. Manual inpection is recommended at this point to inspect and remove any **wrongstart** files from this folder.
 ___
 
-- **cgmvariable_dictionary.xlsx** is used to rename variables of interest. This could be updated for variable names of other sensors and integrated into cleanCGM() function. Final variable names should be **id**, **timestampfp** ,**fingerprickglucose**, **timestamp**, **sensorglucose** defined as below. 
+- **cgmvariable_dictionary.xlsx** is used to rename variables of interest. This should be updated for variable names of other sensors and is integrated into cleanCGM() function. Final variable names should be **id**, **timestampfp** ,**fingerprickglucose**, **timestamp**, **sensorglucose** defined as below. See [cleanCGM section](#cleancgm) for further detail.
+
+- Files from preprocessing are outputted with changed CGM variable names already and reformatted slightly (conversion of HI/LO etc.) compared to raw data as below:
+
+**Table**: Preprocess script output
+| id    | timestampfp      | fingerprickglucose | timestamp        | sensorglucose |
+|-------|------------------|--------------------|------------------|---------------|
+| 10013 | 14/06/2013 13:24 | 8.88               | 14/06/2013 13:54 | 10.88         |
+| 10013 | 14/06/2013 13:50 | 12.49              | 14/06/2013 13:59 | 11.27         |
+| 10013 | 14/06/2013 18:18 | 8.32               | 14/06/2013 14:04 | 11.32         |
+| 10013 | 15/06/2013 17:42 | 6.22               | 14/06/2013 14:09 | 11.43         |
+| 10013 |                  |                    | 14/06/2013 14:14 | 11.54         |
+| 10013 |                  |                    | 14/06/2013 14:19 | 11.6          |
+| 10013 |                  |                    | 14/06/2013 14:24 | 11.76         |
+
+- Files are named as **ID_timepoint.csv** based on the excel sheet name
+
+❗**Important**: **Glucose readings must be in mmmol/l. Manually change files in raw excel files. More information on conversion found [here](https://www.diabetes.co.uk/blood-sugar-converter.html)❗
+
+
+## cleanCGM
+___
+**Functionality:** **cleanCGM()** is a function written to clean CGM data for simpler file outputs and perform (optional) calibration against fingerstick SMBG values developed of Dexcom G4 data. 
+❗**Before you begin:**
+❗ Files should be named as _ID_optional.ext_ 
+❗Update **cgmvariable_dictionary.xlsx** with names of variables specific to sensor 
+___
+- Function can take raw files from Dexcom, Libre or previosuly preprocessed from an input folder directory. Files can be of any format, csv is preferred.
+
+- **cgmvariable_dictionary.xlsx** is used to rename variables of interest. This should be updated for variable names of other sensors and is integrated into this cleanCGM() function. Final variable names should be **id**, **timestampfp** ,**fingerprickglucose**, **timestamp**, **sensorglucose** defined in Table below.
+
 
 **Table**: Definitions of the final variables
 | variable           | definition                                                  |
@@ -61,37 +91,12 @@ ___
 | historic.glucose.mmol.l. | sensorglucose      |
 | Scan.Glucose.mmol.L.     | scanglucose        |
 
-- Files from preprocessing are outputted with changed CGM variable names already and reformatted slightly (conversion of HI/LO etc.) compared to raw data as below:
-
-**Table**: Preprocess script output
-| id    | timestampfp      | fingerprickglucose | timestamp        | sensorglucose |
-|-------|------------------|--------------------|------------------|---------------|
-| 10013 | 14/06/2013 13:24 | 8.88               | 14/06/2013 13:54 | 10.88         |
-| 10013 | 14/06/2013 13:50 | 12.49              | 14/06/2013 13:59 | 11.27         |
-| 10013 | 14/06/2013 18:18 | 8.32               | 14/06/2013 14:04 | 11.32         |
-| 10013 | 15/06/2013 17:42 | 6.22               | 14/06/2013 14:09 | 11.43         |
-| 10013 |                  |                    | 14/06/2013 14:14 | 11.54         |
-| 10013 |                  |                    | 14/06/2013 14:19 | 11.6          |
-| 10013 |                  |                    | 14/06/2013 14:24 | 11.76         |
-
-- Files are named as **ID_timepoint.csv** based on the excel sheet name
-
-❗**Important**: **Glucose readings must be in mmmol/l. Manually change files in raw excel files. More information on conversion found [here](https://www.diabetes.co.uk/blood-sugar-converter.html)❗
-
-
-## cleanCGM
-___
-**Functionality:** **cleanCGM()** is a function written to clean CGM data for simpler file outputs and perform (optional) calibration against fingerstick SMBG values developed of Dexcom G4 data. 
-___
-- Function can take raw files from Dexcom, Libre or previosuly preprocessed from an input folder directory. Files can be of any format, csv is preferred.
-
-❗ **Important:** Files should be named as _ID_optional.ext_ ❗
 
 - Text Low/High are in filled with the min/max limits depending on the inputted sensor type
 
 - Calibration is performed againsted logged fingerstick SMBG readings and nearest 15 min later sensor reading. Calibration excluded 1) whole traces if 2 blood glucose calibrations were not completed at the start of the sensor wear, 2) a day of wear if the MARD of the sensor glucose and blood glucose calibration on that day is >20% or if <2 blood glucose calibrations were completes on that day. This can be set to false for CGM. 
 
--If calibration check is TRUE then the calibration table of fingerstick SMBG matched to nearest 15 min later sensor glucose with the correlation (checking there were 2 fingersticks per day) and the MARD between the sensor and fingerstick with be output to the specified calibrationoutput directory
+- If calibration check is TRUE then the calibration table of fingerstick SMBG matched to nearest 15 min later sensor glucose with the correlation (checking there were 2 fingersticks per day) and the MARD between the sensor and fingerstick with be output to the specified calibrationoutput directory
 
 ---
 👷‍♀️ **_FOR DEVELOPMENT_**👷‍:_Libre sensors store glucose every 15 mins, in order for analyseCGM to work based consensus CGM analysis [here](https://care.diabetesjournals.org/content/40/12/1631) we must make the 15 min intervaltimeseries data into 5 min interval data. Currently cleanCGM() handles this with the line below, adding dummy 5 min data by adding 2 rows after every original row that is the same as the original row :_ 
@@ -125,12 +130,12 @@ ___
 
 - For calculation of time spent variables data is checked to be consecutive. If timestamps are >20 min apart a missing row is added to the table to prevent events from runnning on if the time gap is >20 min.
 
-- Time spent variables are created for: 
-                - Above 10, 13.9, 16
-                - Below 3, 
-                - Range 3-<3.9, 3.9-10
-                - Hyperglycemia (at levels >10 and >13.9)
-                - Hypoglycemia
+- Time spent variables are created for:
+  - Above 10, 13.9, 16
+  - Below 3, 
+  - Range 3-<3.9, 3.9-10
+  - Hyperglycemia (at levels >10 and >13.9)
+  - Hypoglycemia
 
 - Hyper/hypoglycemia are defined as excursions. The start of an excursion is going above/below the specified value for 15 mins. If this doesn't happpen it is not defined as an excursion and isn't included in the hyper/hypo time spent, but will be included in the general time spent for the defined time spent variables. 
 
