@@ -5,9 +5,9 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of {CGMprocessing} is to provide functions for preparing, cleaning and analysing Continuous Glucose Monitoring (CGM) data. The functions in the package were developed from  Dexcom G4 data with 5 minute intervals and was specifically developed to enable processing and analysing of data from the 2 separate EXTOD Randomised Control Trials (RCT) lead by Professor Rob Andrews and Dr Parth Narendran See [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7317834/) for published information about the EXTOD Education program and [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7317834/) for the published EXTOD RCT. 
+The goal of {CGMprocessing} is to provide functions for preparing, cleaning and analysing Continuous Glucose Monitoring (CGM) data aligned with concensus definitions. The functions in the package were developed from  Dexcom G4 data with 5 minute intervals and was specifically developed to enable processing and analysing of data from the 2 separate Randomised Control Trials (RCT) investigating exercise in type 1 diabetes lead by Professor Rob Andrews and Dr Parth Narendran See [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7317834/) for published information about the EXTOD Education program and [here](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7317834/) for the published EXTOD RCT. 
 
-Glycemic variables and definitions are based off the [International Concensus on Use of Continuous Gucose Monitoring](https://care.diabetesjournals.org/content/40/12/1631).
+Glycemic output variables and definitions are aligned with the [International Concensus on Use of Continuous Gucose Monitoring](https://care.diabetesjournals.org/content/40/12/1631).
 
 This code was developed based off work by [T. Vigers](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0216851)
 
