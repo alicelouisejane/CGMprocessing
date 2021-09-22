@@ -50,7 +50,8 @@ ___
 ## cleanCGM
 ___
 **Functionality:** **cleanCGM()** is a function written to clean CGM data for simpler file outputs and perform (optional) calibration against fingerstick SMBG values developed of Dexcom G4 data. 
-- ❗**Before you begin:**❗
+
+❗**Before you begin**:❗
   - ❗Files should be named as _ID_optional.ext_ 
   - ❗Update **cgmvariable_dictionary.xlsx** with names of variables specific to sensor 
 ___
