@@ -56,7 +56,7 @@ ___
   - ❗Update **cgmvariable_dictionary.xlsx** with names of variables specific to sensor
   - ❗Glucose readings must be in mmmol/l. Manually change files in raw excel files. More information on conversion found [here](https://www.diabetes.co.uk/blood-sugar-converter.html)
   - ❗Inspect raw data for blank rows before row of variables. Within the code at the point of file load in the parametier _skip_ can be added to skip such rows. For example for Libre data we are required to skip 2 rows this is outlined below by _skip=2_.
-  - 
+  
   ```{r eval=FALSE, echo=T}
  table <-  rio::import(files[f], skip =2 ,guess_max = 10000000)
 ```
