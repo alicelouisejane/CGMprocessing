@@ -50,7 +50,7 @@
 #'
 #'
 
-inputdirectory<-"LiverpoolData/data-4hrs after/"
+inputdirectory<-"EXTOD education/data-clean_7day/"
 
 
 analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
@@ -72,7 +72,8 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     table <- utils::read.csv(files[f],
       stringsAsFactors = FALSE,
       na.strings = c("NA", "")
-    ) %>% select(-1)
+    )
+    #%>% select(-1)
     names(table) <- tolower(names(table))
     cgmupload["subject_id", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][1]
     table <- unique(table)

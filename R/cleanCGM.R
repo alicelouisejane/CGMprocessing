@@ -33,7 +33,7 @@
 #'
 #'
 
-inputdirectory<-"LiverpoolData/data-clean/"
+inputdirectory<-"EXTOD education/data-preprocessed/"
 cleanCGM <- function(inputdirectory,
                      outputdirectory = tempdir(),
                      calibrationcheck = TRUE, sensortype = "other", select7days = T, calibrationoutput = tempdir()) {
