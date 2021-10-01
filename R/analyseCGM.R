@@ -53,7 +53,7 @@
 inputdirectory<-"LiverpoolData/data-4hrs after/"
 
 
-cgmanalysis2 <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
+analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
                          outputname, awakeorsleepor24 = "24", aboveexcursionlength = 15,
                          belowexcursionlength = 15, magedef = "1sd", congan = 1, daystart = 06,
                          dayend = 00, format = "rows", printname = T) {
