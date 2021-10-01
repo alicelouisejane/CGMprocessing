@@ -50,6 +50,9 @@
 #'
 #'
 
+inputdirectory<-"LiverpoolData/data-4hrs after/"
+
+
 cgmanalysis2 <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
                          outputname, awakeorsleepor24 = "24", aboveexcursionlength = 15,
                          belowexcursionlength = 15, magedef = "1sd", congan = 1, daystart = 06,
@@ -69,7 +72,7 @@ cgmanalysis2 <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outpu
     table <- utils::read.csv(files[f],
       stringsAsFactors = FALSE,
       na.strings = c("NA", "")
-    )
+    ) %>% select(-1)
     names(table) <- tolower(names(table))
     cgmupload["subject_id", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][1]
     table <- unique(table)

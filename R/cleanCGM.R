@@ -204,7 +204,7 @@ cleanCGM <- function(inputdirectory,
       # split into two dataframes for easier analysis
       df1 <- table[c("id", "fingerprickglucose", "timestampfp")]
       df1 <- df1[!is.na(df1$fingerprickglucose), ]
-      df2 <- table[c("id", "sensorglucose", "timestamp", "group")]
+      df2 <- table[c("id", "sensorglucose", "timestamp")]
       df2 <- df2[!is.na(df2$sensorglucose), ]
       # find closest times of finger prick to the cgm and create a data frame of these called calibration
       # diff is in seconds
