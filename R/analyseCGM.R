@@ -50,7 +50,7 @@
 #'
 #'
 
-inputdirectory<-"EXTOD education/data-clean_7day/"
+inputdirectory<-"LiverpoolData/data-4hrs24hrconrolbyday/"
 
 
 analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
@@ -72,8 +72,9 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     table <- utils::read.csv(files[f],
       stringsAsFactors = FALSE,
       na.strings = c("NA", "")
-    )
-    #%>% select(-1)
+    ) %>% select(-c(contains(c("x","V1"))))
+
+
     names(table) <- tolower(names(table))
     cgmupload["subject_id", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][1]
     table <- unique(table)
@@ -87,6 +88,9 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       dateparseorder,
       tz = "UTC"
     ))
+
+    table<- table %>% arrange((timestamp)) #important to order on timestamp for many functions below to work
+
 
     if (is.null(length(table$sensorglucose)) | length(table$sensorglucose) == 1 | length(table$sensorglucose) == 0) {
       print(base::paste(files[f], "not enought data"))
