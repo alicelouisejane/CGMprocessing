@@ -50,7 +50,7 @@
 #'
 #'
 
-inputdirectory<-"LiverpoolData/data-4hrs after/"
+inputdirectory<-"LiverpoolData/data-4hrs24hrcontrol/"
 
 
 analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
@@ -726,7 +726,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
 
     # over 13
     BGinrange13 <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))], length = 1)
-    BGinrange13 <- ifelse(BGinrange13 > 13, 1, 0)
+    BGinrange13 <- ifelse(BGinrange13 > 13.9, 1, 0)
     cgmupload["min_spent_over13", f] <- base::round(base::sum(BGinrange13) * (interval / 60), digits = 2)
     cgmupload["percent_time_over13", f] <- base::round(((base::sum(BGinrange13) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
 
@@ -750,7 +750,9 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
 
     # Calculate MAGE
     # Smooth data using an exponentially weighted 9 point moving average, calculate SD of unsmoothed data.
-    if (base::round(base::length(table$sensorglucose) / (3600 / interval)) > 12 & !is.null(length(table$sensorglucose))) {
+    #require 12 hours of data for this
+    #if (base::round(base::length(table$sensorglucose) / (3600 / interval)) > 12 & !is.null(length(table$sensorglucose))) {
+    if (!is.null(length(table$sensorglucose))) {
       table$smoothed <- base::as.numeric(zoo::rollapply(zoo::zoo(table$sensorglucose),
         9, function(x) {
           c(1, 2, 4, 8, 16, 8, 4, 2, 1) %*%
@@ -766,14 +768,17 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       sd <- stats::sd(table$sensorglucose)
 
 
+
       tryCatch({
       # Identify turning points, peaks, and nadirs.
       tpoints <- pastecs::turnpoints(table$smoothed)
       }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
-      peaks <- base::which(tpoints[["peaks"]] == TRUE)
-      pits <- base::which(tpoints[["pits"]] == TRUE)
+      tpointposition<- pastecs::extract(tpoints, no.tp = 0, peak = 1, pit = -1)
+      peaks <- base::which(tpointposition==1)
+      pits <- base::which(tpointposition==-1)
 
-      # if differecen between adjacent turning points are < 1sd (usually 1 but can be others) then it is not a turning point, so remove it
+
+
       # Calculate the difference between each nadir and its following peak. If the
       # data starts on a peak, remove it. Otherwise remove the final pit to create an even number of pits and peaks.
       if (tpoints[["firstispeak"]] == TRUE && base::length(peaks) != base::length(pits)) {
@@ -782,9 +787,15 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
         pits <- pits[1:(base::length(pits) - 1)]
       }
       differences <- table$sensorglucose[peaks] - table$sensorglucose[pits]
+      # if differecen between adjacent turning points are < 1sd (usually 1 but can be others) then it is not a turning point,
+      #if there are no turning points then MAGE will be NaN
+      #MAGE is Na if there wasnt 12 hours of data for this
+
+
       # Calculate the average of the differences greater than the entire dataset SD, 2SD, etc
       if (magedef == "1sd") {
         cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > sd)])), digits = 2)
+
       }
       else if (magedef == "1.5sd") {
         cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > (sd * 1.5))])), digits = 2)
