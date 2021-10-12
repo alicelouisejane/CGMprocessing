@@ -50,7 +50,7 @@
 #'
 #'
 
-inputdirectory<-"LiverpoolData/data-4hrs24hrconrolbyday/"
+inputdirectory<-"LiverpoolData/data-4hrs after/"
 
 
 analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
@@ -242,7 +242,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       table10 <- table10
     }
     # missing variables means that they all will be given value of NA which is what we want
-    if (length(insertpostions10) > 1) {
+    if (length(insertpostions10) >= 1) {
       table10 <- berryFunctions::insertRows(table10, r = c(insertpostions10), new = NA, rcurrent = T)
     }
 
@@ -331,7 +331,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       table13 <- table13
     }
     # missing variables means that they all will be given value of NA which is what we want
-    if (length(insertpostions13) > 1) {
+    if (length(insertpostions13) >= 1) {
       table13 <- berryFunctions::insertRows(table13, r = c(insertpostions13), new = NA, rcurrent = T)
     }
 
@@ -418,7 +418,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       table16 <- table16
     }
     # missing variables means that they all will be given value of NA which is what we want
-    if (length(insertpostions16) > 1) {
+    if (length(insertpostions16) >= 1) {
       table16 <- berryFunctions::insertRows(table16, r = c(insertpostions16), new = NA, rcurrent = T)
     }
 
@@ -506,7 +506,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       hypo <- hypo
     }
     # missing variables means that they all will be given value of NA which is what we want
-    if (length(insertpostionshypo) > 1) {
+    if (length(insertpostionshypo) >= 1) {
       hypo <- berryFunctions::insertRows(hypo, r = c(insertpostionshypo), new = NA, rcurrent = T)
     }
 
@@ -836,13 +836,16 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     cgmupload["modd", f] <- base::mean(stats::na.omit(moddtable$mean_differences))
 
     # LBGI and HBGI (based on dc1386 appendix)
+
     a <- 1.026
     b <- 1.861
     y <- 1.794
-    table$gluctransform2 <- y * ((base::log(table$sensorglucose)^a) - b) # brackets may be in the wrong place...
+    table$gluctransform2 <- y * (((base::log(table$sensorglucose))^a) - b)
     table$rBG <- 10 * ((table$gluctransform)^2)
     rl <- table$rBG[base::which(table$gluctransform < 0)]
+    rl<-ifelse(pracma::isempty(rl),0,rl)
     rh <- table$rBG[base::which(table$gluctransform > 0)]
+    rh<-ifelse(pracma::isempty(rh),0,rh)
     cgmupload["lbgi", f] <- base::round(base::mean(stats::na.omit(rl)), digits = 2)
     cgmupload["hbgi", f] <- base::round(base::mean(stats::na.omit(rh)), digits = 2)
 
