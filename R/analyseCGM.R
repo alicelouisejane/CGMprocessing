@@ -46,12 +46,11 @@
 #' @export
 #'
 #' @examples
-#' cgmanalysis2(F,F,"CGMprocessing/data-clean/","CGMprocessing/Upload","EXTOD")
+#' analyseCGM(F,F,"CGMprocessing/data-clean/","CGMprocessing/Upload","EXTOD")
 #'
 #'
 
-inputdirectory<-"LiverpoolData/data-4hrs24hrcontrol/"
-
+inputdirectory<-"EXTOD/data-clean/"
 
 analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
                          outputname, awakeorsleepor24 = "24", aboveexcursionlength = 15,
@@ -72,7 +71,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     table <- utils::read.csv(files[f],
       stringsAsFactors = FALSE,
       na.strings = c("NA", "")
-    ) %>% select(-c(contains(c("x","V1"))))
+    ) %>% select(-c(contains(c("^x","^V1"))))
 
 
     names(table) <- tolower(names(table))
@@ -847,10 +846,42 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     cgmupload["modd", f] <- base::mean(stats::na.omit(moddtable$mean_differences))
 
     # LBGI and HBGI (based on dc1386 appendix)
+    #
 
+    #old mmol/l paramerters
     a <- 1.026
     b <- 1.861
     y <- 1.794
+
+    # #old mg/dl paramerters
+    # a<-1.084
+    # b<-5.381
+    # y<-1.509
+    #
+    #
+    # xmax <- 27.8
+    # xmin <- 2.2
+    #
+    #
+    # #need to check this equation still, in development
+    # flbgi<-function(xmax,xmin,a){
+    # abs(log(xmax)^a + log(xmin)^a -log(10)^a-log(3.9)^a)
+    # }
+    #
+    # flbgi_optim<-function(xmax,xmin){
+    #   res<-function(a) flbgi(xmax,xmin,a)
+    # }
+    #
+    # attr<-flbgi_optim(xmax,xmin)
+    #
+    # a <- optim(2,attr,method = "Brent", lower = 0.7, upper = 2)$par
+    # b <- log(10)^a+log(3.9)^a
+    # y <- sqrt(10)/(log(xmax)^a-b)
+    # log(xmax)^a + log(xmin)^a -log(10)^a-log(3.9)^a
+    # - y * (((base::log(xmax))^a) - b) # test
+    # - y * (((base::log(xmin))^a) - b) # test
+
+
     table$gluctransform2 <- y * (((base::log(table$sensorglucose))^a) - b)
     table$rBG <- 10 * ((table$gluctransform)^2)
     rl <- table$rBG[base::which(table$gluctransform < 0)]
