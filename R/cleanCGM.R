@@ -33,7 +33,7 @@
 #'
 #'
 
-inputdirectory<-"EXTOD education/data-preprocessed/"
+inputdirectory<-"EXTOD/data-preprocessed"
 cleanCGM <- function(inputdirectory,
                      outputdirectory = tempdir(),
                      calibrationcheck = TRUE, sensortype = "other", select7days = T, calibrationoutput = tempdir()) {
@@ -180,7 +180,7 @@ cleanCGM <- function(inputdirectory,
     # Selects the first 7 days of wear
     if (select7days == T) {
       if (totaltimedays > 8) {
-        table <- time %>% filter(dplyr::between(as.Date(timestamp), as.Date(recordstart), as.Date(recordstart) + lubridate::days(7)))
+        table <- time %>% dplyr::filter(dplyr::between(as.Date(timestamp), as.Date(recordstart), as.Date(recordstart) + lubridate::days(7)))
         #percentage expected wear cutting at 7 days (if select 7 days )
         totaltime7datcut <- difftime(max(table$timestamp), min(table$timestamp), units = "secs")
         totaltime7datcut <- as.numeric(totaltime7datcut)
@@ -271,7 +271,7 @@ cleanCGM <- function(inputdirectory,
       # dates that werent included as not first 7 days data removed from calibration summary table
       if (select7days == T) {
         if (totaltimedays > 8) {
-          quality <- quality %>% filter(dplyr::between(Date, Date + lubridate::days(7)))
+          quality <- quality %>% dplyr::filter(dplyr::between(as.Date(Date),as.Date(recordstart), as.Date(recordstart) + lubridate::days(7)))
         } else {
           quality <- quality
         }
