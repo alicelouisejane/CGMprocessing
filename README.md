@@ -62,7 +62,7 @@ ___
 ```
  
 ___
-- Function can take raw files from Dexcom, Libre or previosuly preprocessed from an input folder directory. Files can be of any format, csv is preferred.
+- Function can take raw files from Dexcom, Libre or previosuly preprocessed from an input folder directory. Files can be of any format, csv is preferred. ie in funtion call folder **data-raw**
 
 - **cgmvariable_dictionary.xlsx** is used to rename variables of interest. This should be updated for variable names of other sensors and is integrated into this cleanCGM() function. Final variable names should be **id**, **timestampfp** ,**fingerprickglucose**, **timestamp**, **sensorglucose** defined in Table below.
 
