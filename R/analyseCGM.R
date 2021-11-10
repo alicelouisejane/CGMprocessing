@@ -14,6 +14,10 @@
 #'
 #' @param outputname name of output file appended to CGM.data.only. use simple identifiers ie.studyname / timepoints
 #'
+#'@param sensormax Maximum value the sensor used can read to used in the HBGI/LBGI calculation, dexcom: 27.8
+#'
+#'@param sensormin Min value the sensor used can read to used in the HBGI/LBGI calculation dexcom: 2.2
+#'
 #' @param awakeorsleepor24 (in development) Option of windowing data. Inputs
 #'  are the strings "awake" , "sleep" or "24". Default is 24
 #'
@@ -50,10 +54,8 @@
 #'
 #'
 
-inputdirectory<-"EXTOD/data-clean/"
-
 analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
-                         outputname, awakeorsleepor24 = "24", aboveexcursionlength = 15,
+                         outputname,sensormax,sensormin,awakeorsleepor24 = "24", aboveexcursionlength = 15,
                          belowexcursionlength = 15, magedef = "1sd", congan = 1, daystart = 06,
                          dayend = 00, format = "rows", printname = T) {
 
@@ -71,7 +73,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     table <- utils::read.csv(files[f],
       stringsAsFactors = FALSE,
       na.strings = c("NA", "")
-    ) %>% select(-c(contains(c("^x","^V1"))))
+    ) %>% dplyr::select(-c(starts_with(c("x","V1"))))
 
 
     names(table) <- tolower(names(table))
@@ -859,27 +861,30 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # y<-1.509
     #
     #
-    # xmax <- 27.8
-    # xmin <- 2.2
+
+    # The HBGI/LBGI uses assumption that glucose is symetric, using the min glucose value as 1.1 and max as 33.3 in the
+    #coefficent derivation, howver this only correct for the SMBG monitors and if CGM sensor limits are different
+    #the glucose will not be symetric we therefore have to rederive the a,b y corefficents in the equation based on
+    #the specific sensor limits
+    # have kept this commented out for now
+    #need to check this equation still, in development
+
+    # sensormax <- 27.8
+    # sensormin <- 2.2
     #
-    #
-    # #need to check this equation still, in development
-    # flbgi<-function(xmax,xmin,a){
-    # abs(log(xmax)^a + log(xmin)^a -log(10)^a-log(3.9)^a)
+    # flbgi<-function(sensormax,sensormin,a){
+    # abs(log(sensormax)^a + log(sensormin)^a -log(10)^a-log(3.9)^a)
     # }
     #
-    # flbgi_optim<-function(xmax,xmin){
-    #   res<-function(a) flbgi(xmax,xmin,a)
+    # flbgi_optim<-function(sensormax,sensormin){
+    #   res<-function(a) flbgi(sensormax,sensormin,a)
     # }
     #
-    # attr<-flbgi_optim(xmax,xmin)
+    # attr<-flbgi_optim(sensormax,sensormin)
     #
     # a <- optim(2,attr,method = "Brent", lower = 0.7, upper = 2)$par
     # b <- log(10)^a+log(3.9)^a
-    # y <- sqrt(10)/(log(xmax)^a-b)
-    # log(xmax)^a + log(xmin)^a -log(10)^a-log(3.9)^a
-    # - y * (((base::log(xmax))^a) - b) # test
-    # - y * (((base::log(xmin))^a) - b) # test
+    # y <- sqrt(10)/(log(sensormax)^a-b)
 
 
     table$gluctransform2 <- y * (((base::log(table$sensorglucose))^a) - b)
