@@ -145,6 +145,8 @@ ___
   - Hyperglycemia (at levels >10 and >13.9)
   - Hypoglycemia
 
+- The original equation of HBGI/LBGI [here](https://pubmed.ncbi.nlm.nih.gov/9353603/) performs symmetrization using the assumption that the minimum glucose value as 1.1 and maximum as 33.3 to derive the coefficients in the equation. However this only correct for the SMBG monitors and if CGM sensor limits are different this violates the assumption of the deriviation and the coefficients that are used as a "standard" are incorrect and caused underesimation of risk. If we want to be able to compare LBGI/HBGI between sensors we therefore have to rederive the a,b y corefficents in the equation based on the specific sensor limits.
+
 - Hyper/hypoglycemia are defined as excursions. The start of an excursion is going above/below the specified value for 15 mins. If this doesn't happpen it is not defined as an excursion and isn't included in the hyper/hypo time spent, but will be included in the general time spent for the defined time spent variables. 
 
 ___
