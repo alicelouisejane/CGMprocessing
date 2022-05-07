@@ -134,8 +134,7 @@ ___
 **Functionality:** **analyseCGM()** is a function written to create concensus glycemic metrics based off definitions outlined [here](https://care.diabetesjournals.org/content/40/12/1631). Fuction takes files from the **data-clean** folder where the output of cleanCGM() is stored.
 ___
 
-___
-**Parameters:**
+### Function parameters:
 
 **exerciseanalysis** Default is FALSE. In house development of time windowed exercise files.  Format of these files is slightly different to the output files from [CGMprocessing::cleanCGM()] function
 
