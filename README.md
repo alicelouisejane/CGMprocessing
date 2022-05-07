@@ -133,8 +133,46 @@ table<-slice(table,rep(1:n(), each = 3))
 ___
 **Functionality:** **analyseCGM()** is a function written to create concensus glycemic metrics based off definitions outlined [here](https://care.diabetesjournals.org/content/40/12/1631). Fuction takes files from the **data-clean** folder where the output of cleanCGM() is stored.
 ___
+___
+**Parameters:**
+
+**exerciseanalysis** Default is FALSE. In house development of time windowed exercise files.  Format of these files is slightly different to the output files from [CGMprocessing::cleanCGM()] function
+
+**libre** For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
+ Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method. ie. Every row there is an addition of 2 rows that are same as the original row. This is done in the [CGMprocessing::cleanCGM()] function. If specifed as TRUE the interval (which will appear 5 min due to dummy data) will be multiplied by 3 to give the original interval of the libre monitor
+
+**inputdirectory** path to folder containing files created by [CGMprocessing::cleanCGM()] function
+
+**outputdirectory** path to folder where output csv file will be uploaded
+
+**outputname** name of output file appended to CGM.data.only. use simple identifiers ie.studyname / timepoints
+
+**sensormax** Maximum value the sensor used can read to used in the HBGI/LBGI calculation, dexcom: 27.8
+
+**sensormin** Min value the sensor used can read to used in the HBGI/LBGI calculation dexcom: 2.2
+
+**awakeorsleepor24** (in development) Option of windowing data. Inputs are the strings "awake" , "sleep" or "24". Default is 24
+
+**aboveexcursionlength** numeric for the time (in minutes) defined as an hyperglycemic exercusion default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
+
+**belowexcursionlength** numeric for the time (in minutes) defined as an hypoglycemic exercusion
+default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
+
+**magedef** Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward of all glycemic excursions exceeding the threshold (standard deviation of blood glucose obtained from all blood glucose concentrations within 24-hour period). Default is 1 standarddevation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd") or other can be specifed as a numeric
+
+**congan** Specificing the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
+of all valid differences between a current observation and an observation (n) hours earlier
+
+**daystart** Defining the hours of the start of a day for use in AUC calcualtion and windowing if using. Default is 06
+
+**dayend** Defining the hours of the end of a day for use in AUC calcualtion and windowing if using. Default is 00
+
+**format** changes format to CGM variables as x or y in table. Default is "rows" making each ID a row
+
+**printname** Prints name of the file being processed. Default is TRUE.
 
 🖋️ **NOTE**: There is an paramater for exercise analysis specified in this function specific to in house Exeter/Liverpool processing of data. This additional option is used to analyse specific files of exercise aligned glucose that were not ran through the cleanCGM() function. Keep parameter as FALSE.🖋️
+___
 
 - For calculation of time spent variables data is checked to be consecutive. If timestamps are >20 min apart a missing row is added to the table to prevent events from runnning on if the time gap is >20 min.
 
