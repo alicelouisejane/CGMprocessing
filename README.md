@@ -133,6 +133,7 @@ table<-slice(table,rep(1:n(), each = 3))
 ___
 **Functionality:** **analyseCGM()** is a function written to create concensus glycemic metrics based off definitions outlined [here](https://care.diabetesjournals.org/content/40/12/1631). Fuction takes files from the **data-clean** folder where the output of cleanCGM() is stored.
 ___
+
 ___
 **Parameters:**
 
