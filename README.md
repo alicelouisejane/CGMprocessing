@@ -52,6 +52,7 @@ ___
 **Functionality:** **cleanCGM()** is a function written to clean CGM data for simpler file outputs and perform (optional) calibration against fingerstick SMBG values developed of Dexcom G4 data. 
 
 ❗**Before you begin**:❗
+  - ❗Some parameters are specific to inhouse data in which this code was developed to analyse, please read **Function paramaters** section below for details
   - ❗Files should be named as _ID_optional.ext_ 
   - ❗Update **cgmvariable_dictionary.xlsx** with names of variables specific to sensor
   - ❗Glucose readings must be in mmmol/l. Manually change files in raw excel files. More information on conversion found [here](https://www.diabetes.co.uk/blood-sugar-converter.html)
@@ -62,6 +63,25 @@ ___
 ```
  
 ___
+
+### Function paramaters
+
+**inputdirectory** path to folder containing raw (or in house preprocessed) files. Prefered csv format but could read in others.
+
+**outputdirectory** path to folder where cleaned output files will be stored
+
+**calibrationcheck** Default TRUE. This calibration was sensor dependant (Dexcom G4) againsted logged fingerstick readings and nearest 15 min later sensor reading. Calibration excluded 1) whole traces if 2 blood glucose calibrations were not completed at the start of the sensor wear, 2) a day of wear if the MARD of the sensor glucose and blood glucose calibration on that day is >20% or if <2 blood glucose calibrations were completes on that day. This can be set to false for CGM without fingerstick calibration. Check if layout of input files is correct if using this calibration as TRUE
+
+**sensortype** Type of sensor used options are dexcom, libre or other. Default is other due to the nature of the files having to be preprocessed due start date errors. Should set to dexcom or libre if the raw csv files should be able to be read in.
+
+**select7days** Quirk of inhouse data was some data collection meant there were longer than 7 days of collection stored on the system we therefore use this to take the first 7 days of data if data was >8 days collected (accuracy of sensor decreases after 8 days)
+
+**calibrationoutput** if calibration check is TRUE ensure to have output directory for calibration files. This will output the
+ calibration table of fingerstick matched to nearest 15 min later sensor glucose with the correlation
+ (checking there were 2 fingersticks per day) and the MARD between the sensor and fingerstick
+
+___
+
 - Function can take raw files from Dexcom, Libre or previosuly preprocessed from an input folder directory. Files can be of any format, csv is preferred. ie in funtion call folder **data-raw**
 
 - **cgmvariable_dictionary.xlsx** is used to rename variables of interest. This should be updated for variable names of other sensors and is integrated into this cleanCGM() function. Final variable names should be **id**, **timestampfp** ,**fingerprickglucose**, **timestamp**, **sensorglucose** defined in Table below.
