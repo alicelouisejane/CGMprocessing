@@ -31,7 +31,7 @@
 #' @examples
 #' cleanCGM("CGMprocessing/data-preprocessed/","CGMprocessing/data-clean",T,"other",T,"CGMprocessing/calibration")
 #'
-#'
+#'Notes: add a option for expected day wear for the sensor / depending on what sensor selected, double check the percentage wear calcs
 
 inputdirectory<-"EXTOD/data-preprocessed"
 cleanCGM <- function(inputdirectory,
@@ -110,6 +110,8 @@ cleanCGM <- function(inputdirectory,
         ))
       )
 
+
+      table<- table %>% arrange((timestamp)) #order on timestamp
 
       #adds dummy 5 min data by adding 2 rows after every original row that is the same as the original row
       # FOR DEVELOPMENT- here we could look at interpolation of data only interpolating up to 20mins of gap perhaps

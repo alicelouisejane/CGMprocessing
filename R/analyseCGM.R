@@ -54,6 +54,8 @@
 #'
 #'
 
+#inputdirectory<-"LiverpoolData/data-clean/"
+inputdirectory<-"EXTOD education/data-4hrs after/"
 analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
                          outputname,sensormax,sensormin,awakeorsleepor24 = "24", aboveexcursionlength = 15,
                          belowexcursionlength = 15, magedef = "1sd", congan = 1, daystart = 06,
@@ -112,6 +114,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       table <- table
     }
 
+
     table$sensorglucose <-
       base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
     # if not enough data
@@ -131,9 +134,6 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       next
     }
 
-    # Total time in the dataset is the whole length of the dataset x 300 as each row represetns 300 seconds (5mins)
-    # this does not add in interpolation and only accounts for adds time that we have readings for
-    totaltime <- nrow(table) * interval
 
     # this is for in house use with development ongoing
     if (exerciseanalysis == T) {
@@ -154,7 +154,20 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       cgmupload["min_spent_5_12_exercise", f] <-base::round(base::sum(BGinrangepostexercise) * (interval / 60), digits = 2)
       cgmupload["percent_time_5_12_exercise", f] <- base::round(((base::sum(BGinrangepostexercise) * (interval / 60)) * 60 / postexercisetime) * 100, digits = 2)
 
+      # ensure now the table is only timevalues after exercise ie. diff disc !=0
+
+      if(outputname=="4hours"){
+      table<-filter(table,diff_disc!=0)
+      }
     }
+
+
+
+
+    # Total time in the dataset is the whole length of the dataset x 300 as each row represetns 300 seconds (5mins)
+    # this does not add in interpolation and only accounts for adds time that we have readings for
+    totaltime <- nrow(table) * interval
+
 
     # Beginning of generation of table
     cgmupload["totaltime_mins", f] <- as.numeric(totaltime) / 60
@@ -178,7 +191,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     cgmupload["num_hrs_good_data", f] <- base::round(unlist(totaltime) / 3600)
 
     # number of readings- wouldnt include interpolated, if we were to include interpolation it should be in this function after this call
-    cgmupload["total_sensor_readings", f] <- base::as.numeric(base::length(base::which(!is.na(table$sensorglucose))))
+    cgmupload["total_sensor_readings", f] <- base::as.numeric(base::nrow(unique(table[!is.na(table$sensorglucose),])))
 
     # this was calculated in the calibration/file set up file and is a column in the read in file, take the first row
     if (exerciseanalysis == F) {
@@ -233,7 +246,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # this also prevents interpolation over 20 min- would treat episodes >20 min as separate even if the rows are next to each other
     # table10$consecutive <- c(FALSE,diff(as.Date(table10$date))>1)
 
-    table10$consecutive <- c(FALSE, diff(table10$timestamp) > 1200)
+    table10$consecutive <- c(FALSE, as.numeric(diff(table10$timestamp),units="secs") > 1200)
 
     insertpostions10 <- which(table10$consecutive %in% TRUE)
     if (length(insertpostions10) != 0) {
@@ -322,7 +335,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # this prevents excursions that were on one day running to another non-consective day if that day started >=13
     # table13$consecutive <- c(FALSE,diff(as.Date(table13$date))>1)
 
-    table13$consecutive <- c(FALSE, diff(table13$timestamp) > 1200)
+    table13$consecutive <- c(FALSE, as.numeric(diff(table13$timestamp),units="secs") > 1200)
     insertpostions13 <- which(table13$consecutive %in% TRUE)
 
     if (length(insertpostions13) != 0) {
@@ -408,7 +421,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # this prevents excursions that were on one day running to another non-consective day if that day started >=13
     # table16$consecutive <- c(FALSE,diff(as.Date(table16$date))>1)
 
-    table16$consecutive <- c(FALSE, diff(table16$timestamp) > 1200)
+    table16$consecutive <- c(FALSE, as.numeric(diff(table16$timestamp),units="secs") > 1200)
 
     insertpostions16 <- which(table16$consecutive %in% TRUE)
 
@@ -496,7 +509,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     hypo <- table
     # put breaks (rows of NA) where there are non-consectuive timestamps (ie. after calibration when some dates have been removed)
     # this prevents excursions that were on one day running to another non-consective day if that day started >=13
-    hypo$consecutive <- c(FALSE, diff(hypo$timestamp) > 1200)
+    hypo$consecutive <- c(FALSE, as.numeric(diff(hypo$timestamp),units="secs") > 1200)
     insertpostionshypo <- which(hypo$consecutive %in% TRUE)
 
     # insertpostionshypo<-match(TRUE,hypo$consecutive)
@@ -750,6 +763,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
 
 
     # Calculate MAGE
+    # https://go.gale.com/ps/i.do?id=GALE%7CA252447314&sid=googleScholar&v=2.1&it=r&linkaccess=abs&issn=15209156&p=AONE&sw=w&userGroupName=loyoland_main
     # Smooth data using an exponentially weighted 9 point moving average, calculate SD of unsmoothed data.
     #require 12 hours of data for this
     #if (base::round(base::length(table$sensorglucose) / (3600 / interval)) > 12 & !is.null(length(table$sensorglucose))) {
@@ -872,6 +886,8 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # sensormax <- 27.8
     # sensormin <- 2.2
     #
+
+    #
     # flbgi<-function(sensormax,sensormin,a){
     # abs(log(sensormax)^a + log(sensormin)^a -log(10)^a-log(3.9)^a)
     # }
@@ -890,9 +906,15 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     table$gluctransform2 <- y * (((base::log(table$sensorglucose))^a) - b)
     table$rBG <- 10 * ((table$gluctransform)^2)
     rl <- table$rBG[base::which(table$gluctransform < 0)]
-    rl<-ifelse(pracma::isempty(rl),0,rl)
+    if(pracma::isempty(rl)){
+      rl<-0
+    }
+
     rh <- table$rBG[base::which(table$gluctransform > 0)]
-    rh<-ifelse(pracma::isempty(rh),0,rh)
+    if(pracma::isempty(rh)){
+      rl<-0
+    }
+
     cgmupload["lbgi", f] <- base::round(base::mean(stats::na.omit(rl)), digits = 2)
     cgmupload["hbgi", f] <- base::round(base::mean(stats::na.omit(rh)), digits = 2)
 
