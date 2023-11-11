@@ -1,119 +1,109 @@
-#' Generate CGM metrics of glycemia
+#'@title analyseCGM
 #'
-#' @param exerciseanalysis Default is FALSE. In house development of time windowed exercise files.
+#'@description This function function written to create consensus glycemic metrics based off definitions outlined International Consensus on Use of Continuous Glucose Monitoring. Ths function takes files of a certain structure as outlined in the README.
+#'@returns A .csv file called by default CGMupload.csv containing CGM variables per each individual (file) on each row
+#'
+#'@param hourspostexercise only use if exercise=T. Accepts a numeric for the specific restricted timeperiod post exercise (usually 6 hours)
+#'
+#'@param exercise Default is FALSE. In house development of time windowed exercise files.
 #' Format of these files is slightly different to the output files from [CGMprocessing::cleanCGM()] function
-#' @param libre For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
+#'
+#'@param libre For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
 #' Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method.
 #' ie. Every row there is an addition of 2 rows that are same as the original row.
-#' This is done in the [CGMprocessing::cleanCGM()] function. If specifed as TRUE the interval
-#' (which will appear 5 min due to dummy data) will be multiplied by 3 to give the original interval of the libre monitor
 #'
-#' @param inputdirectory path to folder containing files created by [CGMprocessing::cleanCGM()] function
+#'@param inputdirectory path to folder containing files created by [CGMprocessing::cleanCGM()] function
 #'
-#' @param outputdirectory path to folder where output csv file will be uploaded
+#'@param outputdirectory path to folder where output csv file will be uploaded
 #'
-#' @param outputname name of output file appended to CGM.data.only. use simple identifiers ie.studyname / timepoints
+#'@param outputname name of output file
 #'
-#'@param sensormax Maximum value the sensor used can read to used in the HBGI/LBGI calculation, dexcom: 27.8
-#'
-#'@param sensormin Min value the sensor used can read to used in the HBGI/LBGI calculation dexcom: 2.2
-#'
-#' @param awakeorsleepor24 (in development) Option of windowing data. Inputs
-#'  are the strings "awake" , "sleep" or "24". Default is 24
-#'
-#' @param aboveexcursionlength numeric for the time (in minutes) defined as an hyperglycemic exercusion
+#'@param aboveexcursionlength numeric for the time (in minutes) defined as an hyperglycemic exercusion
 #'  default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
 #'
-#' @param belowexcursionlength numeric for the time (in minutes) defined as an hypoglycemic exercusion
+#'@param belowexcursionlength numeric for the time (in minutes) defined as an hypoglycemic exercusion
 #'  default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
 #'
-#' @param magedef Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward
+#'@param magedef Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward
 #' of all glycemic excursions exceeding the threshold (standard deviation of blood glucose obtained from all blood glucose
 #' concentrations within 24-hour period). Default is 1 standarddevation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd")
 #' or other can be specifed as a numeric
 #'
-#' @param congan Specificing the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
+#'@param congan Specificing the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
 #' of all valid differences between a current observation and an observation (n) hours earlier
 #'
-#' @param daystart Defining the hours of the start of a day for use in AUC calcualtion and windowing if using. Default is 06
+#'@param format changes format to CGM variables as x or y in table. Default is "rows" making each ID a row
 #'
-#' @param dayend Defining the hours of the end of a day for use in AUC calcualtion and windowing if using. Default is 00
-#'
-#' @param format changes format to CGM variables as x or y in table. Default is "rows" making each ID a row
-#'
-#' @param printname Prints name of the file being processed. Default is TRUE.
+#'@param printname Prints name of the file being processed. Default is TRUE.
 #'
 #' @importFrom rio import export
-#' @importFrom dplyr mutate across contains if_else filter select ifelse
+#' @importFrom dplyr mutate across contains filter select group_by inner_join slice ungroup arrange if_else
+#' @importFrom tools file_path_sans_ext
+#' @importFrom janitor clean_names
+#' @importFrom anytime anytime
+#' @importFrom here here
+#' @import tidyr
+#' @import lubridate
+#' @importFrom berryFunctions insertRows
+#' @import pracma
+#' @import stats
+#' @import pastecs
+#' @import zoo
+#' @import purrr
+#'
 #' @author Alice Carr
-#' @return
+#'
 #' @export
 #'
-#' @examples
-#' analyseCGM(F,F,"CGMprocessing/data-clean/","CGMprocessing/Upload","EXTOD")
+#' @seealso
+#' cleanCGM and exercise_split
 #'
 #'
 
-#inputdirectory<-"LiverpoolData/data-clean/"
-inputdirectory<-"EXTOD education/data-4hrs after/"
-analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputdirectory,
-                         outputname,sensormax,sensormin,awakeorsleepor24 = "24", aboveexcursionlength = 15,
-                         belowexcursionlength = 15, magedef = "1sd", congan = 1, daystart = 06,
-                         dayend = 00, format = "rows", printname = T) {
 
+analyseCGM <- function(exercise = F,
+                       hourspostexercise,
+                       libre=T,
+                       inputdirectory,
+                       outputdirectory,
+                       outputname="CGMupload",
+                       belowexcursionlength = 15,
+                       aboveexcursionlength = 15,
+                       magedef = "1sd",
+                       congan = 1,
+                       format = "rows",
+                       printname = T) {
+
+  # define lists
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
   cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(files)))
   base::colnames(cgmupload) <- base::rep("Record", base::length(files))
-  dateparseorder <- c(
-    "mdy HM", "mdy HMS", "mdY HM", "mdY HMS",
-    "dmy HM", "dmy HMS", "dmY HM", "dmY HMS", "Ymd HM", "Ymd HMS",
-    "ymd HM", "ymd HMS", "Ydm HM", "Ydm HMS", "ydm HM", "ydm HMS"
-  )
-  allhours <- 0:23
-  for (f in 1:base::length(files)) {
-    Id <- base::unlist(base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_"))[1]
-    table <- utils::read.csv(files[f],
-      stringsAsFactors = FALSE,
-      na.strings = c("NA", "")
-    ) %>% dplyr::select(-c(starts_with(c("x","V1"))))
 
+
+  for (f in 1:base::length(files)) {
+    table <-  base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
+    #Id <- unique(table$id)
+    Id <- base::unlist(tools::file_path_sans_ext(basename(files[f])), "_")
 
     names(table) <- tolower(names(table))
-    cgmupload["subject_id", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][1]
+    cgmupload["subject_id", f] <- Id
     table <- unique(table)
+
     if (printname == T) {
       print(basename(files[f]))
     }
 
 
+# more recent times there is an issue with date time change to remove parse date time
+    table$timestamp <- base::as.POSIXct(table$timestamp)
 
-    table$timestamp <- base::as.POSIXct(lubridate::parse_date_time(table$timestamp,
-      dateparseorder,
-      tz = "UTC"
-    ))
-
-    table<- table %>% arrange((timestamp)) #important to order on timestamp for many functions below to work
+    table<- table %>% arrange(timestamp) #important to order on timestamp for many functions below to work
 
 
     if (is.null(length(table$sensorglucose)) | length(table$sensorglucose) == 1 | length(table$sensorglucose) == 0) {
       print(base::paste(files[f], "not enought data"))
       next
     }
-
-    if (awakeorsleepor24 == "awake") {
-      daytime_indexes <-
-        base::which(base::as.numeric(base::format(table$timestamp, "%H")) %in%
-          allhours[base::which(!(0:23 %in% (daystart - 1):dayend))])
-      table <- table[daytime_indexes, ]
-    } else if (awakeorsleepor24 == "sleep") {
-      nighttime_indexes <-
-        base::which(base::as.numeric(base::format(table$timestamp, "%H")) %in%
-          allhours[base::which((0:23 %in% (daystart - 1):dayend))])
-      table <- table[nighttime_indexes, ]
-    } else if (awakeorsleepor24 == "24") {
-      table <- table
-    }
-
 
     table$sensorglucose <-
       base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
@@ -122,7 +112,8 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     interval <- base::abs(interval)
     if(libre==T & interval==900){
       interval<- interval/3
-        # all sensor readings ensure there are "5min readings" for the analyseCGM function
+      # all sensor readings ensure there are "5min readings" for the analyseCGM function.
+      #Pseudo code it this way mainly for the hypo definition which relies on 15mins
         table<-slice(table,rep(1:n(), each = 3))
     }else if(libre==T & interval!=900){
       table<-table
@@ -136,36 +127,34 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
 
 
     # this is for in house use with development ongoing
-    if (exerciseanalysis == T) {
+    if (exercise == T) {
+      hourspostexercise==hourspostexercise
       table$date<-as.Date(table$timestamp)
-      cgmupload["pointafterexercise_hrs", f] <- max(as.numeric(table$diff_disc))
-      cgmupload["num_exercise_days", f] <- length(unique(as.Date(table$timestamp))) # number of exercise days this glucose summary metrics are calculated on
-
+      cgmupload["exercise", f]<-"TRUE"
       #time in range for exercise 7-15 mmol/L from Lancet guidelines
-      exercisetime<- nrow(table[table$diff_disc==0,]) * 300
+      exercisetime<- nrow(table[table$diff_disc==0,]) * interval
+      if(exercisetime>0){
       BGinrangeexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc==0)], length = 1)
       BGinrangeexercise <- ifelse(BGinrangeexercise %in% seq(7, 15, 0.01), 1, 0)
       cgmupload["min_spent_7_15_exercise", f] <-base::round(base::sum(BGinrangeexercise) * (interval / 60), digits = 2)
       cgmupload["percent_time_7_15_exercise", f] <- base::round(((base::sum(BGinrangeexercise) * (interval / 60)) * 60 / exercisetime) * 100, digits = 2)
       #recommended post exercise 5-12
-      postexercisetime<- nrow(table[table$diff_disc!=0,]) * 300
+      postexercisetime<- nrow(table[table$diff_disc>0 & table$diff_disc<=hourspostexercise,]) * 300
       BGinrangepostexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc!=0)], length = 1)
       BGinrangepostexercise <- ifelse(BGinrangepostexercise %in% seq(7, 15, 0.01), 1, 0)
       cgmupload["min_spent_5_12_exercise", f] <-base::round(base::sum(BGinrangepostexercise) * (interval / 60), digits = 2)
       cgmupload["percent_time_5_12_exercise", f] <- base::round(((base::sum(BGinrangepostexercise) * (interval / 60)) * 60 / postexercisetime) * 100, digits = 2)
+      }
 
       # ensure now the table is only timevalues after exercise ie. diff disc !=0
-
-      if(outputname=="4hours"){
       table<-filter(table,diff_disc!=0)
-      }
     }
 
 
 
 
     # Total time in the dataset is the whole length of the dataset x 300 as each row represetns 300 seconds (5mins)
-    # this does not add in interpolation and only accounts for adds time that we have readings for
+    #table will have been interpoated in preprocessing, the number of minutes/cgm points interpolated can be derived from that output file
     totaltime <- nrow(table) * interval
 
 
@@ -179,37 +168,29 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     table$id<-Id
     }else if(libre==F){
     cgmupload["interval", f] <- interval
+    table$id<-Id
     }
 
-    # this is the number of WHOLE DATES in the file. Not specific the actual amount of time, so would still count it as a day if it was half a day
-    # cgmupload["num_days_good_data", f] <- table %>% dplyr::group_by(date) %>% dplyr::summarise(length(unique(table$date))) %>% dplyr::pull(2) %>% unlist() %>% .[1]
-
     # this should actually be total time /24*3600 for more accurate day count
-     cgmupload["num_days_good_data", f] <- base::round(unlist(totaltime) /(24*60*60))
+    cgmupload["num_days_cgmwear", f] <- as.numeric(round(difftime(max(table$timestamp),min(table$timestamp),units ="days")))
 
     # this is more the true amount of time as it goes off specific hours
-    cgmupload["num_hrs_good_data", f] <- base::round(unlist(totaltime) / 3600)
+    cgmupload["totaltime_hours", f] <- base::round(unlist(totaltime) / 3600)
 
     # number of readings- wouldnt include interpolated, if we were to include interpolation it should be in this function after this call
     cgmupload["total_sensor_readings", f] <- base::as.numeric(base::nrow(unique(table[!is.na(table$sensorglucose),])))
-
-    # this was calculated in the calibration/file set up file and is a column in the read in file, take the first row
-    if (exerciseanalysis == F) {
-    cgmupload["percentage_wear", f] <- ifelse(is.null(table$percent_cgm_wear[1]),NA,table$percent_cgm_wear[1])
-    cgmupload["percentage_expected_wear", f] <- ifelse(is.null(table$percentage_expected_wear[1]),NA,table$percentage_expected_wear[1])
-    cgmupload["percentage_expected_wear_aftersensorlifetimecutoff", f] <- ifelse(is.null(table$percenageexpectedwear_7daycut[1]),NA,table$percenageexpectedwear_7daycut[1])
-    }
 
     # Average sensor glucose
     cgmupload["average_sensor", f] <- base::round(base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))], na.rm = T), digits = 2)
 
     # Hba1C equations uses glucose in mg/dl so convert it
     glucosemgdl <- (table$sensorglucose[base::which(!is.na(table$sensorglucose))]) * 18
-    cgmupload["estimated_a1c", f] <- base::round((46.7 + (base::mean(glucosemgdl[base::which(!is.na(glucosemgdl))]))) / 28.7, digits = 1)
+    cgmupload["estimated_a1c%", f] <- base::round((46.7 + (base::mean(glucosemgdl[base::which(!is.na(glucosemgdl))]))) / 28.7, digits = 1)
+    cgmupload["estimated_a1cmmolmol", f] <- 10.929 * (base::round((46.7 + (base::mean(glucosemgdl[base::which(!is.na(glucosemgdl))]))) / 28.7, digits = 1)- 2.15)
 
     # the gmi is the Glucose Management Indicator inndicates the average A1C level that would be expected based on mean glucose measured
     # gmi and estimated Hba1C should therefore be similar...
-    cgmupload["gmi", f] <- base::round(12.71 + (4.70587 * base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])), digits = 1)
+    cgmupload["gmimmol/mol", f] <- base::round(12.71 + (4.70587 * base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])), digits = 1)
 
     # lower quartile sensor glucose
     cgmupload["q1_sensor", f] <- base::round(base::as.numeric(base::summary(table$sensorglucose[base::which(!is.na(table$sensorglucose))])[2]), digits = 2)
@@ -234,8 +215,6 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # maximum reading
     cgmupload["max_sensor", f] <- base::round(base::max(table$sensorglucose[base::which(!is.na(table$sensorglucose))]), digits = 2)
 
-
-    require(dplyr)
     ########### Over 10mmol calcs##########
     # create a new df so not to mess up table for the other metrics
     table10 <- table
@@ -280,7 +259,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     over10loc$position <- cumsum(BG10.rle$lengths) + 1
     over10loc$lengths <- BG10.rle$lengths
     over10loc$lengthstrue <- BG10.rle$lengths - 1
-    over10loc <- as.data.frame(over10loc)
+    over10loc <- base::as.data.frame(over10loc)
     over10loc$true <- ifelse(over10loc$lengths >= (((aboveexcursionlength * 60) / interval) + 1) & over10loc$values == 1, T, F)
 
     # number of true excursions >10 >15minsif gaps are >20 mins between consecutive excursiosn
@@ -321,7 +300,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # pick up the time where 1 sequence starts, and 0 starts as the end. Here the mins10 array is
     # one element longer than time but since the last element for mins10 == 1 will always be false because padded by 0, it won't affect the result.
     results10 <- data.frame(start = time10[mins10 == 1], end = time10[(mins10 == -1)[-1]]) %>%
-      summarise(sum(difftime(end, start, unit = "secs")))
+      dplyr::summarise(sum(difftime(end, start, units = "secs")))
 
     # final variables for mins > 10 and percentage time >10 from above code
     cgmupload["min_spent_excursion_over_10", f] <- base::round(base::sum(as.numeric(results10)) / 60)
@@ -408,7 +387,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # pick up the time where 1 sequence starts, and 0 starts as the end. Here the mins13 array is
     # one element longer than time but since the last element for mins13 == 1 will always be false because padded by 0, it won't affect the result.
     results13 <- data.frame(start = time13[mins13 == 1], end = time13[(mins13 == -1)[-1]]) %>%
-      summarise(sum(difftime(end, start, unit = "secs")))
+      dplyr::summarise(sum(difftime(end, start, units = "secs")))
 
     cgmupload["min_spent_excursion_over_13", f] <- base::round(base::sum(as.numeric(results13) / 60))
     cgmupload["percent_time_excursion_over_13", f] <- base::round((base::sum(as.numeric(results13)) / totaltime) * 100, digits = 2)
@@ -494,7 +473,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # pick up the time where 1 sequence starts, and 0 starts as the end. Here the mins13 array is
     # one element longer than time but since the last element for mins13 == 1 will always be false because padded by 0, it won't affect the result.
     results16 <- data.frame(start = time16[mins16 == 1], end = time16[(mins16 == -1)[-1]]) %>%
-      summarise(sum(difftime(end, start, unit = "secs")))
+      dplyr::summarise(sum(difftime(end, start, units = "secs")))
 
     cgmupload["min_spent_excursion_over_16", f] <- base::round(base::sum(as.numeric(results16) / 60))
     cgmupload["percent_time_excursion_over_16", f] <- base::round((base::sum(as.numeric(results16)) / totaltime) * 100, digits = 2)
@@ -627,6 +606,8 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     hypo <- hypo %>%
       mutate(BGunder3 = purrr::accumulate(BGunder3, fill_in_3))
 
+
+
     # all 2s at the end of a 1 sequence chnaged to 1s
     hypo <- hypo %>%
       dplyr::mutate(BGunder3 = dplyr::case_when(
@@ -662,23 +643,27 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     hypo$BGunder3 <- ifelse(is.na(hypo$id), 2.1, hypo$BGunder3)
 
 
-    # final end
+    # final end -
+    #this was added in as it was trying to stric the definition to the END of the 15min period had been >3.9.
+    # this just adds an extra 20mins to the hypo time which i dont think should happen
+    # we can define true hypos as >3 for 15 mins with the event not ending until >3.9 15in but it should end at the first 3.9 it went to when the event ended
+    #for now comment this out
     # padd with 0s again so this works
-    BGunder3 <- c(0, hypo$BGunder3, 0, 0, 0, 0)
-    for (i in 2:length(BGunder3)) {
-      if (BGunder3[i] == 0 && BGunder3[i - 1] == 1) {
-        BGunder3[i] <- 2
-        BGunder3[i + 1] <- 2
-        BGunder3[i + 2] <- 2
-        BGunder3[i + 3] <- 2
-      }
-    }
-    # replace in the hypo df and turn those 2s into 1s
-    hypo$BGunder3 <- BGunder3[2:(length(BGunder3) - 4)]
-    hypo <- hypo %>% dplyr::mutate(BGunder3 = dplyr::case_when(
-      BGunder3 == 2 ~ 1,
-      TRUE ~ BGunder3
-    ))
+    # BGunder3 <- c(0, hypo$BGunder3, 0, 0, 0, 0)
+    # for (i in 2:length(BGunder3)) {
+    #   if (BGunder3[i] == 0 && BGunder3[i - 1] == 1) {
+    #     BGunder3[i] <- 2
+    #     BGunder3[i + 1] <- 2
+    #     BGunder3[i + 2] <- 2
+    #     BGunder3[i + 3] <- 2
+    #   }
+    # }
+    # # replace in the hypo df and turn those 2s into 1s
+    # hypo$BGunder3 <- BGunder3[2:(length(BGunder3) - 4)]
+    # hypo <- hypo %>% dplyr::mutate(BGunder3 = dplyr::case_when(
+    #   BGunder3 == 2 ~ 1,
+    #   TRUE ~ BGunder3
+    # ))
 
     #if there is a gap in a hypo then the gap would be >20 mins long we have not done interpolation here therefore we cant assume hypo is the same one so we make the gap =0
 
@@ -699,7 +684,8 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     # one element longer than time but since the last element for mins13 == 1 will always be false because padded by 0, it won't affect the result.
     # we already defined the end as the end of the 15 mins earlier so this is the true end
     resultshypo <- data.frame(start = timehypo[minshypo == 1], end = timehypo[(minshypo == -1)[-1]]) %>%
-      summarise(sum(difftime(end, start, unit = "secs")))
+      dplyr::summarise(sum(difftime(end, start, units = "secs")))
+
 
     cgmupload["min_spent_under_hypo3", f] <- base::round(base::sum(as.numeric(resultshypo) / 60))
     cgmupload["percent_time_under_hypo3", f] <- base::round((base::sum(as.numeric(resultshypo)) / totaltime) * 100, digits = 2)
@@ -745,12 +731,6 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     cgmupload["percent_time_over13", f] <- base::round(((base::sum(BGinrange13) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
 
 
-    # Find daytime
-    daytime_indexes <- base::which(base::as.numeric(base::format(table$timestamp, "%H")) %in% daystart:dayend)
-    daytime_sensor <- table$sensorglucose[daytime_indexes]
-
-    # for use in AUC
-    xaxis <- base::seq(from = 0, length.out = base::length(daytime_sensor), by = (interval / 60))
     # total AUC
     sensorBG <- base::as.numeric(table$sensorglucose, length = 1)
     xaxis <- base::seq(from = 0, length.out = base::length(sensorBG), by = (interval / 60))
@@ -804,21 +784,18 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
       differences <- table$sensorglucose[peaks] - table$sensorglucose[pits]
       # if differecen between adjacent turning points are < 1sd (usually 1 but can be others) then it is not a turning point,
       #if there are no turning points then MAGE will be NaN
-      #MAGE is Na if there wasnt 12 hours of data for this
+      #MAGE is Na if there wasnt 12 hours of data for this? maybe
 
 
       # Calculate the average of the differences greater than the entire dataset SD, 2SD, etc
       if (magedef == "1sd") {
         cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > sd)])), digits = 2)
 
-      }
-      else if (magedef == "1.5sd") {
+      }else if (magedef == "1.5sd") {
         cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > (sd * 1.5))])), digits = 2)
-      }
-      else if (magedef == "2sd") {
+      }else if (magedef == "2sd") {
         cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > (sd * 2))])), digits = 2)
-      }
-      else {
+      }else {
         cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > magedef)])), digits = 2)
       }
     }
@@ -838,6 +815,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     cgmupload[base::paste0("conga_", congan), f] <- base::round(stats::sd(congas, na.rm = T), digits = 2)
 
     # MODD: mean of daily difference
+    # if there is not a full day of data then the MODD will be NAN e when doing exercise analysis
     table$time <- lubridate::round_date(
       table$timestamp,
       "5 minutes"
@@ -869,41 +847,7 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     b <- 1.861
     y <- 1.794
 
-    # #old mg/dl paramerters
-    # a<-1.084
-    # b<-5.381
-    # y<-1.509
-    #
-    #
-
-    # The HBGI/LBGI uses assumption that glucose is symetric, using the min glucose value as 1.1 and max as 33.3 in the
-    #coefficent derivation, howver this only correct for the SMBG monitors and if CGM sensor limits are different
-    #the glucose will not be symetric we therefore have to rederive the a,b y corefficents in the equation based on
-    #the specific sensor limits
-    # have kept this commented out for now
-    #need to check this equation still, in development
-
-    # sensormax <- 27.8
-    # sensormin <- 2.2
-    #
-
-    #
-    # flbgi<-function(sensormax,sensormin,a){
-    # abs(log(sensormax)^a + log(sensormin)^a -log(10)^a-log(3.9)^a)
-    # }
-    #
-    # flbgi_optim<-function(sensormax,sensormin){
-    #   res<-function(a) flbgi(sensormax,sensormin,a)
-    # }
-    #
-    # attr<-flbgi_optim(sensormax,sensormin)
-    #
-    # a <- optim(2,attr,method = "Brent", lower = 0.7, upper = 2)$par
-    # b <- log(10)^a+log(3.9)^a
-    # y <- sqrt(10)/(log(sensormax)^a-b)
-
-
-    table$gluctransform2 <- y * (((base::log(table$sensorglucose))^a) - b)
+    table$gluctransform <- y * (((base::log(table$sensorglucose))^a) - b)
     table$rBG <- 10 * ((table$gluctransform)^2)
     rl <- table$rBG[base::which(table$gluctransform < 0)]
     if(pracma::isempty(rl)){
@@ -918,8 +862,6 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     cgmupload["lbgi", f] <- base::round(base::mean(stats::na.omit(rl)), digits = 2)
     cgmupload["hbgi", f] <- base::round(base::mean(stats::na.omit(rh)), digits = 2)
 
-    # add variable for baseline/6months/12months
-    cgmupload["timepoint", f] <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][2]
   }
 
   # Write file.
@@ -929,8 +871,8 @@ analyseCGM <- function(exerciseanalysis = TRUE, libre=T, inputdirectory, outputd
     cgmupload <- base::as.data.frame(base::t(cgmupload))
     cgmupload <- cgmupload[-1, ]
   }
-  filename <- base::paste0(outputdirectory, "CGM.data.only.", outputname, ".csv")
-  utils::write.csv(cgmupload, file = filename, row.names = FALSE)
+  filename <- base::paste0(outputdirectory, outputname, ".csv")
+  rio::export(cgmupload, file = filename, row.names = FALSE)
 
   closeAllConnections()
 }
