@@ -8,8 +8,8 @@ clinical diabetes studies. Glycemic variables and definitions are inline
 with the International Consensus on Use of Continuous Glucose
 Monitoring: [Danne
 2017](https://care.diabetesjournals.org/content/40/12/1631). This
-package also includes a specific function for use in the in the context
-of diabetes exercise studies, which splits up CGM into specific time
+package also includes a specific function for use in the context of
+diabetes exercise studies, which splits up CGM into specific time
 periods post-exercise. Specific outputs inline with exercise
 recommendations in type 1 diabetes: [Riddell
 2017](https://pubmed.ncbi.nlm.nih.gov/28126459/).
@@ -211,7 +211,8 @@ names are and edit this dictionary.
 
 -   This is an optional argument which is sensor dependent. Also some
     JAEB studies have CGM that had calibration requirements. **This
-    requires the device argument to be set to “other”**.
+    requires the device argument to be set to “other” or “dexcomg4” if
+    you are know you are using an old type of dexcom**.
 
 **How it works:**
 
