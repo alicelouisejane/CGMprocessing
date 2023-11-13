@@ -48,7 +48,7 @@ See parameters for explanations of the arguments per each function:
 ❗**Important**: This package is optimized for raw Dexcom or Libre CGM
 data. Raw CGM files usually have an ID number within the filename. If
 this is the case leave the filename as is. If raw files don’t have this
-then edit the filenames so they are uniqueily identified with the
+then edit the filenames so they are uniquely identified with the
 patients ID number. If you are using already coalesced data from another
 study ie. [JAEB](https://public.jaeb.org/datasets/diabetes) then ID will
 already be a variable within the data structure, because it is a
