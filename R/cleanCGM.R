@@ -34,9 +34,9 @@
 #' @import ggplot2
 #' @import hms
 #' @importFrom tools file_path_sans_ext
-#' @importFrom janitor clean_names
 #' @importFrom anytime anytime
 #' @importFrom here here
+#' @import stringr
 #' @import data.table
 #'
 #' @author Alice Carr
@@ -46,7 +46,6 @@
 #' @seealso
 #' analyseCGM and exercise_split
 #'
-
 
 cleanCGM <- function(inputdirectory,
                      outputdirectory = tempdir(),
@@ -58,9 +57,8 @@ cleanCGM <- function(inputdirectory,
                      impute=F,
                      saveplot=T) {
 
-
   #cgm variable dictionary in documentation data file. Edit source file as necessary if using other CGM
-  file_path <- here::here("inst/extdata", "cgmvariable_dictionary.xlsx")
+  #file_path <- here::here("inst/extdata", "cgmvariable_dictionary.xlsx")
 
   cgm_dict<-rio::import(file_path)
 
@@ -78,15 +76,14 @@ cleanCGM <- function(inputdirectory,
 
     #id from filename (used only in dexcom and libre if device is other then this is irrelavent)
     Id <- tools::file_path_sans_ext(basename(files[f]))
-    Id <- gsub("^([^_]+_[^_]+).*", "\\1", Id)
+    #Id <- gsub("^([^_]+_[^_]+).*", "\\1", Id)
     print(Id)
-
 
     table <-  base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
 
     #if dealing with some libre raw data there may be additional rows added,
     #if youre certain there arent then use FALSE otherwise TRUE can handle both ways
-    if(removerow==T & grepl("V[0-9]",names(table)[1])){
+    if(removerow==T){    # this was causing some issues in the previous if call: & grepl("V[0-9]",names(table)[1])
     names(table)<-table[nrow,]
     table<-table[-(1:nrow), ]
     } else if(removerow==T |!grepl("V[0-9]",names(table)[1])){
@@ -95,11 +92,9 @@ cleanCGM <- function(inputdirectory,
       table<-table
     }
 
-    #lower case and space removed from names
-    table<- janitor::clean_names(table)
 
     #indicates what device we are using the data from, possibly important to keep track of
-    cgm_dict<-filter(cgm_dict,type==device)
+    cgm_dict<-dplyr::filter(cgm_dict,type=="dexcomg6")
     device_vars<- cgm_dict[cgm_dict$old_vars %in% names(table), ]
 
     # rename the variables to standardised variables names
@@ -109,7 +104,8 @@ cleanCGM <- function(inputdirectory,
 
     # try to anticipate problematic dates
     if(is.character(table$timestamp)){
-      table$timestamp <-as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("dmy HMS","dmy HM","mdy HMS","mdy HM")),tz="UTC")
+      table$timestamp<-stringr::str_replace_all(table$timestamp, "T", " ")
+      table$timestamp <-as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("ymd HMS","dmy HMS","dmy HM","mdy HMS","mdy HM")),tz="UTC")
       table$timestamp <-anytime::anytime(table$timestamp, tz = "UTC")
 
     } else if(!is.character(table$timestamp)){
@@ -118,11 +114,38 @@ cleanCGM <- function(inputdirectory,
 
     #find what the interval in the data is ie. 5min for dexcom 15 min for libre
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)/60))
+    #this get rid of the first lines in dexcom as all these rows miss a timestamp
+    #but also gets rid of any problematic missing rows
+    table <- dplyr::filter(table,!is.na(timestamp))
+
+    # keep only variables of interest
+    vars_to_keep <- dplyr::intersect(names(table), unique(cgm_dict$new_vars))
+
+    table$device<-device_vars$type[1]
+
+    table<-dplyr::select(table,c(all_of(vars_to_keep),contains("percent"))) %>%
+      dplyr::select(-contains("record"))
+
+    #change sensor id to be patient id take from filename
+    if(unique(device_vars$type!="other")){
+      table$id <- Id
+    }
+
+    #make sure glucose is numeric
+    table$sensorglucose <-
+      base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
+
+    #order by timestamp
+    table <- table[base::order(table$timestamp), ]
+
+
 
     #convert to mmol/l - if loop tests if glucose is mg/dl as would have higher max value than what would be max in mmol/l
     if(max(table$sensorglucose, na.rm = T)>30){
       table$sensorglucose<-round(table$sensorglucose/18,digits = 2)
     }
+
+
 
     # high and low limits from :
     #https://uk.provider.dexcom.com/sites/g/files/rrchkb126/files/document/2021-09/LBL017451%2BUsing%2BYour%2BG6%2C%2BG6%2C%2BUK%2C%2BEN%2C%2Bmmol_0.pdf
@@ -206,14 +229,14 @@ cleanCGM <- function(inputdirectory,
         dplyr::mutate(num_days_remove_calibration=sum(remove,na.rm=T)) %>%
         dplyr::mutate(average_calibrations_perday_overtimeofwear= mean(num_calibrations_perday,na.rm=T))
 
-      remove <- select(datesincgm,id,remove,date) %>%
-        filter(remove==1)
+      remove <- dplyr::select(datesincgm,id,remove,date) %>%
+        dplyr::filter(remove==1)
 
       # remove bad calibrated days/ days where no calibration was performed
       table <- table_cal %>%
-        merge(remove, by=c("id","date"), all=T) %>%
-        filter(is.na(remove)) %>%
-        select(-remove)
+        dplyr::merge(remove, by=c("id","date"), all=T) %>%
+        dplyr::filter(is.na(remove)) %>%
+        dplyr::select(-remove)
 
       table <- table[base::order(table$id,table$timestamp), ]
 # assessing sensor drop out and not taking into account days removed because of calibration
@@ -229,11 +252,11 @@ cleanCGM <- function(inputdirectory,
 
       #store this as a dataframe
       gaptestoutput[[f]]<-table %>%
-        group_by(id) %>%
-        mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-        mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
-        filter(gap==1)
-        select(id,timestamp,diff)
+        dplyr::group_by(id) %>%
+        dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
+        dplyr::mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
+        dplyr::filter(gap==1)
+      dplyr::select(id,timestamp,diff)
 
 #you can edit this code further to include measures for percentage expected wear etc depending on your needs
         # as this data is expected to be coalesed there with be multiple sensor uploads from the same person
@@ -243,7 +266,7 @@ cleanCGM <- function(inputdirectory,
       # and is aimed at when all data was put into 1 dataframe like in JAEB and not separate files
       # and if there were calibrations performed
       data_collected<- datesincgm %>%
-        select(id,num_days_wear,num_days_calibration,num_days_remove_calibration,average_calibrations_perday_overtimeofwear) %>%
+        dplyr::select(id,num_days_wear,num_days_calibration,num_days_remove_calibration,average_calibrations_perday_overtimeofwear) %>%
         unique()
 
       data_collected_output[[f]]<-data_collected
@@ -252,83 +275,60 @@ cleanCGM <- function(inputdirectory,
         table<-table
 
         gaptest<-table %>%
-          group_by(id) %>%
-          mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-          mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
-          filter(gap==1) %>%
-          mutate(gapcount=sum(gap)) %>%
-          mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
-          select(gaptime,gapcount,timestamp,diff) %>%
-          filter(diff/60>23.5) # focuses only on gaps that are from either the same time of wear or removes where a gap now exisits becuase of calibration removal
+          dplyr::group_by(id) %>%
+          dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
+          dplyr::mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
+          dplyr::filter(gap==1) %>%
+          dplyr::mutate(gapcount=sum(gap)) %>%
+          dplyr::mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
+          dplyr::select(gaptime,gapcount,timestamp,diff) %>%
+          dplyr::filter(diff/60>23.5) # focuses only on gaps that are from either the same time of wear or removes where a gap now exisits becuase of calibration removal
 
         #store this as a dataframe
         gaptestoutput[[f]]<-table %>%
-          group_by(id) %>%
-          mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-          mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
-          filter(gap==1)
-        select(id,timestamp,diff)
+          dplyr::group_by(id) %>%
+          dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
+          dplyr::mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
+          dplyr::filter(gap==1)
+        dplyr::select(id,timestamp,diff)
 
         }
     }
 
-    #this get rid of the first lines in dexcom as all these rows miss a timestamp
-    #but also gets rid of any problematic missing rows
-    table <- dplyr::filter(table,!is.na(timestamp))
-
-    # keep only variables of interest
-    vars_to_keep <- dplyr::intersect(names(table), unique(cgm_dict$new_vars))
-
-    table$device<-device_vars$type[1]
-
-    table<-dplyr::select(table,c(all_of(vars_to_keep),contains("percent"))) %>%
-      dplyr::select(-contains("record"))
-
-    #change sensor id to be patient id take from filename
-    if(unique(device_vars$type!="other")){
-      table$id <- Id
-    }
-
-    #make sure glucose is numeric
-    table$sensorglucose <-
-      base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
-
-    #order by timestamp
-    table <- table[base::order(table$timestamp), ]
 
 
     # test for sensor drop out/ gaps in data. This section will output a summary file for later use containing percentage wear and drop out
     if(grepl("libre",device_vars$type[1])) {
 
     gaptest<-table %>%
-      mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-      mutate(gap=ifelse(abs(diff)>16,1,0)) %>%
-      filter(gap==1) %>%
-      mutate(gapcount=sum(gap)) %>%
-      mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
-      select(gaptime,gapcount,timestamp,diff)
+      dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
+      dplyr::mutate(gap=ifelse(abs(diff)>16,1,0)) %>%
+      dplyr::filter(gap==1) %>%
+      dplyr::mutate(gapcount=sum(gap)) %>%
+      dplyr::mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
+      dplyr::select(gaptime,gapcount,timestamp,diff)
 
     gaptestoutput[[f]]<-table %>%
-      mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-      mutate(gap=ifelse(abs(diff)>16,1,0)) %>%
-      filter(gap==1) %>%
-      select(timestamp,diff) %>%
-      mutate(subject_id=Id)
+      dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
+      dplyr::mutate(gap=ifelse(abs(diff)>16,1,0)) %>%
+      dplyr::filter(gap==1) %>%
+      dplyr::select(timestamp,diff) %>%
+     dplyr::mutate(subject_id=Id)
     } else if(grepl("dexcomg[6-9]|[1-9][0-9]+",device_vars$type[1])) {
       gaptest<-table %>%
-        mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-        mutate(gap=ifelse(abs(diff)>6,1,0)) %>%
-        filter(gap==1) %>%
-        mutate(gapcount=sum(gap)) %>%
-        mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
-        select(gaptime,gapcount,timestamp,diff)
+        dplyr::mutate(diff=as.numeric(difftime(timestamp,dplyr::lead(timestamp), units = "mins"))) %>%
+        dplyr::mutate(gap=ifelse(abs(diff)>6,1,0)) %>%
+        dplyr::filter(gap==1) %>%
+        dplyr::mutate(gapcount=sum(gap)) %>%
+        dplyr::mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
+        dplyr::select(gaptime,gapcount,timestamp,diff)
 
       gaptestoutput[[f]]<-table %>%
-        mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-        mutate(gap=ifelse(abs(diff)>6,1,0)) %>%
-        filter(gap==1) %>%
-        select(timestamp,diff) %>%
-        mutate(subject_id=Id)
+        dplyr::mutate(diff=as.numeric(difftime(timestamp,dplyr::lead(timestamp), units = "mins"))) %>%
+        dplyr::mutate(gap=ifelse(abs(diff)>6,1,0)) %>%
+        dplyr::filter(gap==1) %>%
+        dplyr::select(timestamp,diff) %>%
+        dplyr::mutate(subject_id=Id)
     }
 
 
@@ -449,32 +449,33 @@ if(unique(device_vars$type!="other")){
 }
 }
 
-     table<-filter(table,!is.na(sensorglucose))
+table<-dplyr::filter(table,!is.na(table$sensorglucose))
 
 if(unique(device_vars$type!="other")){
     graph1<-table %>%
-      mutate(date=as.Date(timestamp)) %>%
-      mutate(time=hms::as_hms(timestamp)) %>%
-      ggplot(aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = sensorglucose)) +
-      geom_path(aes(group=as.factor(date),colour=as.factor(date)), colour="grey")+
-      labs(x = "Time", y = "Glucose", title=paste("Summary of CGM wear over:",as.numeric(round(difftime(max(table$timestamp),min(table$timestamp),"days"))),"days","\n Raw data collected:",data_collected$percentage_datacollected_overstudy,"%")) +
-      theme_minimal() +
-      scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
-      stat_summary(aes(fill = "Median hilow"),fun.data = median_hilow, geom = "ribbon",alpha = 0.5, colour = "darkblue", show.legend = T)+
-      stat_summary(aes(fill = "IQR"),fun.data = function(x) {
+      dplyr::mutate(date=as.Date(timestamp)) %>%
+      dplyr::mutate(time=hms::as_hms(timestamp)) %>%
+      ggplot2::ggplot(aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
+      ggplot2::geom_path(aes(group=as.factor(date),colour=as.factor(date)), colour="grey")+
+      ggplot2::labs(x = "Time", y = "Glucose", title=paste("Summary of CGM wear over:",as.numeric(round(difftime(max(table$timestamp),min(table$timestamp),"days"))),"days","\n Raw data collected:",data_collected$percentage_datacollected_overstudy,"%")) +
+      ggplot2::theme_minimal() +
+      ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
+      #median hi low and IQR could be the same as each other...
+      ggplot2::stat_summary(aes(fill = "Median hilow"),fun.data = median_hilow, geom = "ribbon",alpha = 0.5, colour = "darkblue", show.legend = T)+
+      ggplot2::stat_summary(aes(fill = "IQR"),fun.data = function(x) {
         y <- quantile(x, c(0.25, 0.75))
         names(y) <- c("ymin", "ymax")
         y
       }, geom = "ribbon", colour = "lightblue", alpha = 0.5,show.legend = T) +
-      theme(
+      ggplot2::theme(
         legend.position = c(0.85, 0.9),  # Adjust the position of the legend box (top-right corner)
         legend.background = element_rect(fill = "white", color = "black"),  # Customize the legend box
         legend.key.size = unit(0.5, "cm"),  # Adjust the size of the legend keys
         legend.text = element_text(size = 10),  # Adjust the size of the legend text
         legend.title = element_text(size = 12, face = "bold")  # Adjust the size and style of the legend title
       ) +
-      scale_fill_manual("Key",values = c("lightblue","darkblue")) +
-      scale_y_continuous(limits = c(2,(sensormax)),breaks=c(seq(2,sensormax,2)))
+      ggplot2::scale_fill_manual("Key",values = c("lightblue","darkblue")) +
+      ggplot2::scale_y_continuous(limits = c(2,(sensormax)),  breaks=c(seq(2,sensormax,2)))
 
     graphoutput_title<-cowplot::ggdraw(cowplot::plot_grid(
       NULL,
@@ -487,20 +488,20 @@ if(unique(device_vars$type!="other")){
     if(saveplot==T){
       base::dir.create("graphs/", showWarnings = FALSE)
       #save the plot, all patients
-      ggsave(paste("graphs/",Id,"summaryCGM.pdf"),graphoutput_title, width=6,height=6)
+      ggplot2::ggsave(paste("graphs/",Id,"summaryCGM.pdf"),graphoutput_title, width=6,height=6)
     }
 }
     #output
     table$date <- as.Date(table$timestamp)
     filename <- base::paste0(outputdirectory, "/", basename(files[f]))
-    table<-select(table, c(id,date,timestamp,sensorglucose))
+    table<-dplyr::select(table, c(id,date,timestamp,sensorglucose))
     rio::export(table, file = filename)
   }
 
-  gaptestfinaloutput <- bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
+  gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
   rio::export(gaptestfinaloutput,"output/gap_info.xlsx")
 
-  data_collected_output_final<-bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
+  data_collected_output_final<-dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
   rio::export(data_collected_output_final,"output/percentage_data_collected_info.xlsx")
 
 }
