@@ -97,7 +97,7 @@ analyseCGM <- function(exercise = F,
 # more recent times there is an issue with date time change to remove parse date time
     table$timestamp <- base::as.POSIXct(table$timestamp)
 
-    table<- table %>% arrange(timestamp) #important to order on timestamp for many functions below to work
+    table<- table %>% dplyr::arrange(timestamp) #important to order on timestamp for many functions below to work
 
 
     if (is.null(length(table$sensorglucose)) | length(table$sensorglucose) == 1 | length(table$sensorglucose) == 0) {
@@ -107,14 +107,17 @@ analyseCGM <- function(exercise = F,
 
     table$sensorglucose <-
       base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
-    # if not enough data
+
+    #define interval of readings
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
     if(libre==T & interval==900){
       interval<- interval/3
       # all sensor readings ensure there are "5min readings" for the analyseCGM function.
+
       #Pseudo code it this way mainly for the hypo definition which relies on 15mins
         table<-slice(table,rep(1:n(), each = 3))
+
     }else if(libre==T & interval!=900){
       table<-table
     }
