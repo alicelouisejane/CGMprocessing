@@ -58,7 +58,7 @@ cleanCGM <- function(inputdirectory,
                      saveplot=T) {
 
   #cgm variable dictionary in documentation data file. Edit source file as necessary if using other CGM
-  #file_path <- here::here("inst/extdata", "cgmvariable_dictionary.xlsx")
+  file_path <- here::here("inst/extdata", "cgmvariable_dictionary.xlsx")
 
   cgm_dict<-rio::import(file_path)
 
@@ -92,9 +92,8 @@ cleanCGM <- function(inputdirectory,
       table<-table
     }
 
-
     #indicates what device we are using the data from, possibly important to keep track of
-    cgm_dict<-dplyr::filter(cgm_dict,type=="dexcomg6")
+    cgm_dict<-dplyr::filter(cgm_dict,type==device)
     device_vars<- cgm_dict[cgm_dict$old_vars %in% names(table), ]
 
     # rename the variables to standardised variables names
@@ -295,14 +294,12 @@ cleanCGM <- function(inputdirectory,
         }
     }
 
-
-
-    # test for sensor drop out/ gaps in data. This section will output a summary file for later use containing percentage wear and drop out
-    if(grepl("libre",device_vars$type[1])) {
+    #find out most common interval in the data and use this in the gap testing
+    # new libre sensors are 5 min data, some sensors may be 1 min data, dexcom is 5 min
 
     gaptest<-table %>%
       dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-      dplyr::mutate(gap=ifelse(abs(diff)>16,1,0)) %>%
+      dplyr::mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
       dplyr::filter(gap==1) %>%
       dplyr::mutate(gapcount=sum(gap)) %>%
       dplyr::mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
@@ -310,43 +307,26 @@ cleanCGM <- function(inputdirectory,
 
     gaptestoutput[[f]]<-table %>%
       dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
-      dplyr::mutate(gap=ifelse(abs(diff)>16,1,0)) %>%
+      dplyr::mutate(gap=ifelse(abs(diff)>interval+1,1,0)) %>%
       dplyr::filter(gap==1) %>%
       dplyr::select(timestamp,diff) %>%
      dplyr::mutate(subject_id=Id)
-    } else if(grepl("dexcomg[6-9]|[1-9][0-9]+",device_vars$type[1])) {
-      gaptest<-table %>%
-        dplyr::mutate(diff=as.numeric(difftime(timestamp,dplyr::lead(timestamp), units = "mins"))) %>%
-        dplyr::mutate(gap=ifelse(abs(diff)>6,1,0)) %>%
-        dplyr::filter(gap==1) %>%
-        dplyr::mutate(gapcount=sum(gap)) %>%
-        dplyr::mutate(gaptime=paste(timestamp,"length:",abs(diff),"mins")) %>%
-        dplyr::select(gaptime,gapcount,timestamp,diff)
-
-      gaptestoutput[[f]]<-table %>%
-        dplyr::mutate(diff=as.numeric(difftime(timestamp,dplyr::lead(timestamp), units = "mins"))) %>%
-        dplyr::mutate(gap=ifelse(abs(diff)>6,1,0)) %>%
-        dplyr::filter(gap==1) %>%
-        dplyr::select(timestamp,diff) %>%
-        dplyr::mutate(subject_id=Id)
-    }
 
 
-if(unique(device_vars$type!="other")){
+
+if(!is.na(unique(cgm_dict$expectedwear))){
 
   if(nrow(gaptest)>0){
 
     #in this study a participant was expected to wear CGM for at least 24 hours after the finish exercise time
     percentageexpectedwear <- table
 
-    if(grepl("dexcomg[6-9]|[1-9][0-9]+",device_vars$type[1])) {
-
     if(expectedwear=="full"){
-    expectedtime<-24*10 # 5 min readings => 10days =12 lots of 5 mins in 60 -> 24hrs a day -> 10 days
-    expectedtime_mins<-12*24*10
+    expectedtime<-24*unique(cgm_dict$expectedwear) # 24hr * number of days from file
+    expectedtime_mins<-60*24*unique(cgm_dict$expectedwear)
     }else if(is.numeric(expectedwear)){
       expectedtime<-24*expectedwear
-      expectedtime_mins<-12*24*expectedwear
+      expectedtime_mins<-60*24*expectedwear
     }
 
     percentage_expectedwear_overstudy<-as.numeric((round(difftime(max(percentageexpectedwear$timestamp), min(percentageexpectedwear$timestamp), units = "hours"))/expectedtime)*100)
@@ -369,65 +349,13 @@ if(unique(device_vars$type!="other")){
                                percentage_dropout_overstudy=percentage_dropout_overstudy)
 
     data_collected_output[[f]]<-data_collected
-    }else if(grepl("libre",device_vars$type[1])) {
-      if(expectedwear=="full"){
-        expectedtime<-24*14 # 15 min readings => 14days =4 lots of 15 mins in 60 -> 24hrs a day -> 14 days
-        expectedtime_mins<-4*24*10
-      }else if(is.numeric(expectedwear)){
-        expectedtime<-24*expectedwear
-        expectedtime_mins<-12*24*expectedwear
-      }
 
-
-        percentage_expectedwear_overstudy<-as.numeric((round(difftime(max(percentageexpectedwear$timestamp), min(percentageexpectedwear$timestamp), units = "hours"))/expectedtime)*100)
-
-        # look for percentage drop out during the time of interest which is startexercise up to 24 hours after end of exercise
-        percentage_dropout <- gaptest %>%
-          dplyr::summarise(totallosttime=sum(abs(diff)))
-
-        #this is the total amount of time in mins that we were expecting and the sum total of the timegaps in mins that we have
-        percentage_datacollected_overstudy<-((expectedtime_mins-percentage_dropout$totallosttime)/expectedtime_mins)*100
-
-        percentage_dropout_overstudy<-((percentage_dropout$totallosttime)/expectedtime_mins)*100
-
-
-        gaptest_study <- gaptest
-
-        data_collected<-data.frame(subject_id = Id,
-                                   percentage_expectedwear_overstudy=percentage_expectedwear_overstudy,
-                                   percentage_datacollected_overstudy=percentage_datacollected_overstudy,
-                                   percentage_dropout_overstudy=percentage_dropout_overstudy)
-
-        data_collected_output[[f]]<-data_collected
-      }
 } else if(nrow(gaptest)==0){
-
+# there were no gaps in wear
   percentageexpectedwear <- table
 
-  if(grepl("dexcom",device_vars$type[1])) {
-    expectedtime<-24*10 # 5 min readings => 10days =12 lots of 5 mins in 60 -> 24hrs a day -> 10 days
-    expectedtime_mins<-12*24*10
-
-    percentage_expectedwear_overstudy<-as.numeric((round(difftime(max(percentageexpectedwear$timestamp), min(percentageexpectedwear$timestamp), units = "hours"))/expectedtime)*100)
-
-
-    #this is the total amount of time in mins that we were expecting and the sum total of the timegaps in mins that we have
-    percentage_datacollected_overstudy<-100
-
-    percentage_dropout_overstudy<-0
-
-
-    gaptest_study <- gaptest
-
-    data_collected<-data.frame(subject_id = Id,
-                               percentage_expectedwear_overstudy=percentage_expectedwear_overstudy,
-                               percentage_datacollected_overstudy=percentage_datacollected_overstudy,
-                               percentage_dropout_overstudy=percentage_dropout_overstudy)
-
-    data_collected_output[[f]]<-data_collected
-  }else if(grepl("libre",device_vars$type[1])) {
-    expectedtime<-24*14 # 15 min readings => 14days =4 lots of 15 mins in 60 -> 24hrs a day -> 14 days
-    expectedtime_mins<-4*24*10
+    expectedtime<-24*unique(cgm_dict$expectedwear) # 24hr * number of days from file
+    expectedtime_mins<-60*24*unique(cgm_dict$expectedwear)
 
     percentage_expectedwear_overstudy<-as.numeric((round(difftime(max(percentageexpectedwear$timestamp), min(percentageexpectedwear$timestamp), units = "hours"))/expectedtime)*100)
 
@@ -445,8 +373,12 @@ if(unique(device_vars$type!="other")){
 
     data_collected_output[[f]]<-data_collected
 
-  }
 }
+}else if(is.na(unique(cgm_dict$expectedwear))) {
+
+  print("Missing value for expected wear in CGM dictionary file. Unable to generated data collected output. Please update dictionary accordingly.")
+  data_collected_output[[f]]<-NULL
+
 }
 
 table<-dplyr::filter(table,!is.na(table$sensorglucose))
@@ -495,13 +427,13 @@ if(unique(device_vars$type!="other")){
     table$date <- as.Date(table$timestamp)
     filename <- base::paste0(outputdirectory, "/", basename(files[f]))
     table<-dplyr::select(table, c(id,date,timestamp,sensorglucose))
-    rio::export(table, file = filename)
+    rio::export(table, file = paste0(filename,".csv"))
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
-  rio::export(gaptestfinaloutput,"output/gap_info.xlsx")
+  rio::export(gaptestfinaloutput,"output/gap_info.csv")
 
   data_collected_output_final<-dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
-  rio::export(data_collected_output_final,"output/percentage_data_collected_info.xlsx")
+  rio::export(data_collected_output_final,"output/percentage_data_collected_info.csv")
 
 }
