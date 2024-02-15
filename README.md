@@ -59,7 +59,9 @@ However ensure you separate out each ID type in for eg. R list of
 dataframes for when you run either **exercise\_split** or
 **analyseCGM**. If you are working with JAEB, other pre-processed data,
 or other CGM device types ensure you check data structures and edit code
-as appropriately to fit your needs❗ \_\_\_
+as appropriately to fit your needs❗
+
+------------------------------------------------------------------------
 
 ## Introduction to CGM analysis in diabetes clinical research
 
@@ -136,16 +138,26 @@ calibration)</td>
 **Table**: Example of dictionary for renaming old variables in raw CGM
 data files, edit as required. “Type” column in this dictionary is only
 for user only for reference, sensor type is specified as an argument in
-the function. Example is of some variable names I have come across in
-each of the sensors- Always check you data to see what the variable
-names are and edit this dictionary.
+the function.Ensure you enter the lifetime of the sensor used. Example
+is of some variable names I have come across in each of the sensors-
+Always check you data to see what the variable names are and edit this
+dictionary. If you have a mixed download of CGM of files, I recommend
+separating into folders by sensor type to avoid confusion before
+processing.
 
 <table>
+<colgroup>
+<col style="width: 46%" />
+<col style="width: 19%" />
+<col style="width: 11%" />
+<col style="width: 22%" />
+</colgroup>
 <thead>
 <tr class="header">
 <th>old_vars</th>
 <th>new_vars</th>
 <th>type</th>
+<th>sensor_lifetime</th>
 </tr>
 </thead>
 <tbody>
@@ -153,56 +165,73 @@ names are and edit this dictionary.
 <td>Serial Number</td>
 <td>id</td>
 <td>libre</td>
+<td>14</td>
 </tr>
 <tr class="even">
 <td>Device Timestamp</td>
 <td>timestamp</td>
 <td>libre</td>
+<td>14</td>
 </tr>
 <tr class="odd">
-<td>Historic Glucose mmol/L</td>
+<td>Historic Glucose(mmol/L)</td>
 <td>sensorglucose</td>
 <td>libre</td>
+<td>14</td>
 </tr>
 <tr class="even">
-<td>Scan Glucose mmol/L</td>
-<td>scanglucose</td>
+<td>Record Type</td>
+<td>scan_yn</td>
 <td>libre</td>
+<td>14</td>
 </tr>
 <tr class="odd">
+<td>Scan Glucose(mmol/L)</td>
+<td>scanglucose</td>
+<td>libre</td>
+<td>14</td>
+</tr>
+<tr class="even">
 <td>Timestamp (YYYY-MM-DDThh:mm:ss)</td>
 <td>timestamp</td>
 <td>dexcomg6</td>
+<td>10</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>Glucose Value (mmol/L)</td>
 <td>sensorglucose</td>
 <td>dexcomg6</td>
+<td>10</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>Source Device ID</td>
 <td>device</td>
 <td>dexcomg6</td>
+<td>10</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>pt_id</td>
 <td>id</td>
 <td>other</td>
+<td>10</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>device_dt_tm</td>
 <td>timestamp</td>
 <td>other</td>
+<td>10</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>value</td>
 <td>sensorglucose</td>
 <td>other</td>
+<td>10</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>record_type</td>
 <td>recordtype</td>
 <td>other</td>
+<td>10</td>
 </tr>
 </tbody>
 </table>

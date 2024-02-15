@@ -47,9 +47,9 @@
 #' analyseCGM and exercise_split
 #'
 
-cleanCGM <- function(inputdirectory,
+cleanCGM <- function(inputdirectory="/Users/alicecarr/Documents/backup/EXTOD 101 study/Libre data",
                      outputdirectory = tempdir(),
-                     device = "dexcomg6",
+                     device = "libre",
                      calibration = F,
                      removerow=T,
                      nrow=3,
@@ -120,13 +120,10 @@ cleanCGM <- function(inputdirectory,
     # keep only variables of interest
     vars_to_keep <- dplyr::intersect(names(table), unique(cgm_dict$new_vars))
 
-    table$device<-device_vars$type[1]
-
-    table<-dplyr::select(table,c(all_of(vars_to_keep),contains("percent"))) %>%
-      dplyr::select(-contains("record"))
+    table<-dplyr::select(table,c(all_of(vars_to_keep)))
 
     #change sensor id to be patient id take from filename
-    if(unique(device_vars$type!="other")){
+    if(device=="other"){
       table$id <- Id
     }
 
@@ -151,7 +148,7 @@ cleanCGM <- function(inputdirectory,
     # suggests libre 2 has different limits to libre 1 but this is not the case whan i look at my own data
     #https://www.freestyle.abbott/us-en/support/faq.html?page=device/freestyle-libre-2-system/faq/topic/reader
 
-    if (grepl("dexcom",device_vars$type[1])) {
+    if (grepl("dexcom",device)) {
       #change instances of low/ high to sensor limits
       table$sensorglucose <- as.character(table$sensorglucose)
       base::suppressWarnings(
@@ -165,10 +162,10 @@ cleanCGM <- function(inputdirectory,
       sensormin=2.2
       sensormax=24
 
-    } else if (grepl("^libre$",device_vars$type[1])) {
+    } else if (grepl("libre",device)) {
       #DO NOT INCLUDE ANY OTHER RECODS OTHER THAN CGM ie. NOT scanglucose
-      table <- dplyr::filter(table,recordtype==0)
-      table<-dplyr::select(table,-c(recordtype,scanglucose))
+      table <- dplyr::filter(table,scan_yn==0)
+      table<-dplyr::select(table,-c(scan_yn,scanglucose))
       table$sensorglucose <- as.character(table$sensorglucose)
       base::suppressWarnings(
         table <- table %>% dplyr::mutate(sensorglucose = dplyr::case_when(
@@ -295,7 +292,7 @@ cleanCGM <- function(inputdirectory,
     }
 
     #find out most common interval in the data and use this in the gap testing
-    # new libre sensors are 5 min data, some sensors may be 1 min data, dexcom is 5 min
+    # new libre sensors are 5 min data, future may be 1 min data, dexcom is 5 min
 
     gaptest<-table %>%
       dplyr::mutate(diff=as.numeric(difftime(timestamp,lead(timestamp), units = "mins"))) %>%
@@ -425,9 +422,9 @@ if(unique(device_vars$type!="other")){
 }
     #output
     table$date <- as.Date(table$timestamp)
-    filename <- base::paste0(outputdirectory, "/", basename(files[f]))
+    filename <- base::paste0(outputdirectory, "/", Id,".csv")
     table<-dplyr::select(table, c(id,date,timestamp,sensorglucose))
-    rio::export(table, file = paste0(filename,".csv"))
+    rio::export(table, file = paste0(filename))
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
