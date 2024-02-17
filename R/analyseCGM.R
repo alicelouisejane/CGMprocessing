@@ -8,6 +8,10 @@
 #'@param exercise Default is FALSE. In house development of time windowed exercise files.
 #' Format of these files is slightly different to the output files from [CGMprocessing::cleanCGM()] function
 #'
+#'@param combined TRUE/FALSE. Default is FALSE. This aims to handle pre aggregated data where more than one individual/visit etc. is in the file, most likely from external clinical study databases.
+#'
+#'@param analysesensorlifetime TRUE/FALSE. Default is TRUE. Used only with combined= TRUE. If you are expecting to analyse continuous data that is > sensor lifetime then specify to FALSE. This is to ensure multiple sensors from one person are not aggregated by accident.
+#'
 #'@param libre For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
 #' Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method.
 #' ie. Every row there is an addition of 2 rows that are same as the original row.
@@ -63,6 +67,8 @@
 
 analyseCGM <- function(exercise = F,
                        hourspostexercise,
+                       combined=F,
+                       analysesensorlifetime=T,
                        libre=T,
                        inputdirectory,
                        outputdirectory,
@@ -74,13 +80,21 @@ analyseCGM <- function(exercise = F,
                        format = "rows",
                        printname = T) {
 
+  if(combined==F){
   # define lists
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
   cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(files)))
   base::colnames(cgmupload) <- base::rep("Record", base::length(files))
+  }else if(combined==T){
+    table_test<-rio::import(inputdirectory)
+    files<-split(table_test,table_test$id)
+    cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(unique(table_test$id))))
+    base::colnames(cgmupload) <- base::rep("Record", base::length(unique(table_test$id)))
+  }
 
 
   for (f in 1:base::length(files)) {
+    if(combined==F & analysesensorlifetime==T){
     table <-  base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
     #Id <- unique(table$id)
     Id <- base::unlist(tools::file_path_sans_ext(basename(files[f])), "_")
@@ -88,9 +102,39 @@ analyseCGM <- function(exercise = F,
     names(table) <- tolower(names(table))
     cgmupload["subject_id", f] <- Id
     table <- unique(table)
-
     if (printname == T) {
       print(basename(files[f]))
+    }
+    }else if(combined==F & analysesensorlifetime==F){
+      table <-  base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
+      #Id <- unique(table$id)
+      table$id<-sub("_[^_]*$", "", table$id) # if expecting > sensor lifetime then get rid of device id in the underscore
+      Id <- base::unlist(tools::file_path_sans_ext(basename(files[f])), "_")
+      names(table) <- tolower(names(table))
+      cgmupload["subject_id", f] <- Id
+      table <- unique(table)
+      if (printname == T) {
+        print(basename(files[f]))
+      }
+    }else if(combined==T & analysesensorlifetime==T){
+      table <-  files[[f]]
+      #Id <- unique(table$id)
+      Id <- unique(table$id)
+      names(table) <- tolower(names(table))
+      cgmupload["subject_id", f] <- Id
+      table <- unique(table)
+      if (printname == T) {
+        print(Id)
+      }
+    }else if(combined==T & analysesensorlifetime==F){
+      table <-  files[[f]]
+      table$id<- sub("_[^_]*$", "", table$id) # if expecting > sensor lifetime then get rid of device id in the underscore
+      #Id <- unique(table$id)
+      Id <- unique(table$id)
+      names(table) <- tolower(names(table))
+      cgmupload["subject_id", f] <- Id
+      table <- unique(table)
+      print(Id)
     }
 
 
@@ -194,6 +238,7 @@ analyseCGM <- function(exercise = F,
     # the gmi is the Glucose Management Indicator inndicates the average A1C level that would be expected based on mean glucose measured
     # gmi and estimated Hba1C should therefore be similar...
     cgmupload["gmimmol/mol", f] <- base::round(12.71 + (4.70587 * base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))])), digits = 1)
+    cgmupload["gmi%", f] <- base::round(3.31 + (0.02392 * base::mean((table$sensorglucose[base::which(!is.na(table$sensorglucose))]) * 18)), digits = 1)
 
     # lower quartile sensor glucose
     cgmupload["q1_sensor", f] <- base::round(base::as.numeric(base::summary(table$sensorglucose[base::which(!is.na(table$sensorglucose))])[2]), digits = 2)

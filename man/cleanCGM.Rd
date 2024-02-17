@@ -5,24 +5,28 @@
 \title{cleanCGM}
 \usage{
 cleanCGM(
-  inputdirectory,
-  outputdirectory = tempdir(),
-  device = "dexcomg6",
+  inputdirectory =
+    "/Users/alicecarr/Desktop/DIAGNODE-2_Data/CGM_RANDOMISED_preprocessed.csv",
+  outputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/",
+  device = "other",
+  combined = F,
   calibration = F,
-  removerow = T,
+  removerow = F,
   nrow = 3,
   expectedwear = "full",
   impute = F,
-  saveplot = T
+  saveplot = F
 )
 }
 \arguments{
-\item{inputdirectory}{path to folder containing raw (or in house preprocessed) files. Preferred csv format but can read in others.}
+\item{inputdirectory}{path to folder containing raw files. If data is pre-aggregated then use the full file path including file name of this file. Preferred csv format but can read in others.}
 
 \item{outputdirectory}{path to folder where cleaned output files will be stored}
 
 \item{device}{Use "other" if CGM required calibrations. Options are can be any dexcom (g4,g6etc), libre (1,2,pro), or "other." Important to specify what device is being used for the alignment of standardized variable names and to ensure sensor limits, ensure device type is also in the cgm dictionary next to variables.
 "Other" is specified if dealing with data that requires calibration or is in an alternative layout. Gap testing and standard percentage wear and droupout measures will not be created with this but number of days worn will be reported. Edit code as necessary if sensor is other and calibration is false}
+
+\item{combined}{TRUE/FALSE. Default is FALSE. This aims to handle pre aggregated data where more than one individual/visit etc. is in the file, most likely from external clinical study databases. Before running this code please combine patient ID, visit name and device id into one Id type variable. Still specify all variable names in the CGM dictionary.}
 
 \item{calibration}{only works for device = "other" TRUE/FALSE Default is FALSE. The majority of CGM data will not require a calibration, this is sensor dependant. For guardian sensors, dexcom g4 (and older generations) and medtronic ipro2 blood calibrations were required. The layout of the data may effect how this argument works please ensure calibration blood glucoses are labelled in a recordtype variable in the raw data (ie. in JAEB data)}
 
@@ -36,17 +40,17 @@ cleanCGM(
 \item for development. needs fixing and implementing correctly
 }}
 
-\item{saveplot}{TRUE/FALSE Default is True. Save the overall CGM plot over the total number of days of wear. Will not generate if device type is "other"}
+\item{saveplot}{TRUE/FALSE Default is TRUE. Save the overall CGM plot over the total number of days of wear. Will not generate if device type is "other"}
 }
 \value{
-Returns individual files of CGM data that have variable names standardized, missing glucose removed, high and low limits re coded to specific sensor limits. Option of "other" in
-argument device is specific to data that is coalesced into one sheet (ie multiple device uploads + multiple people in 1 file) and may use CGM with calibrations (for eg JAEB data).
-detailed output of percentage wear and sensor drop out and optional CGM graphs created.
-Cleaned files can then be run through the analyseCGM and/or exercise_split functions
+Returns individual files (or aggregated depending on inital structure) of CGM data that have variable names standardized, missing glucose removed, high and low limits re coded to specific sensor limits. Option of "other" in
+argument device is specific to data that is pre-aggregated into one sheet (ie multiple device uploads + multiple people in 1 file) and may use CGM with calibrations (for eg JAEB data).
+detailed output of percentage wear and sensor drop out and optional CGM summary graphs created.
+Cleaned files can then be run through the analyseCGM and/or exercise_split functions.
 }
 \description{
-This function cleans and standardizes raw Continuous glucose monitoring (CGM) devices used in diabetes management. This function is optimised for raw Dexcom or libre data however has some functionality to handle pre coalesced trial data bases.
-Remember to always check your data structures and follow the guide in the README for more help optimising the cose for your specific needs.
+This function cleans and standardizes raw Continuous glucose monitoring (CGM) devices used in diabetes management. This function is optimised for raw Dexcom or libre data however has some functionality to handle pre-aggregated trial data bases.
+Remember to always check your data structures and follow the guide in the README for more help optimizing code for your specific needs.
 }
 \seealso{
 analyseCGM and exercise_split

@@ -7,6 +7,8 @@
 analyseCGM(
   exercise = F,
   hourspostexercise,
+  combined = F,
+  analysesensorlifetime = T,
   libre = T,
   inputdirectory,
   outputdirectory,
@@ -24,6 +26,10 @@ analyseCGM(
 Format of these files is slightly different to the output files from \code{\link[=cleanCGM]{cleanCGM()}} function}
 
 \item{hourspostexercise}{only use if exercise=T. Accepts a numeric for the specific restricted timeperiod post exercise (usually 6 hours)}
+
+\item{combined}{TRUE/FALSE. Default is FALSE. This aims to handle pre aggregated data where more than one individual/visit etc. is in the file, most likely from external clinical study databases.}
+
+\item{analysesensorlifetime}{TRUE/FALSE. Default is TRUE. Used only with combined= TRUE. If you are expecting to analyse continuous data that is > sensor lifetime then specify to FALSE. This is to ensure multiple sensors from one person are not aggregated by accident.}
 
 \item{libre}{For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
 Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method.
