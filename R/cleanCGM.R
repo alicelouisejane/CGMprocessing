@@ -49,8 +49,8 @@
 #' analyseCGM and exercise_split
 #'
 
-cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/CGM_RANDOMISED_preprocessed.csv",
-                     outputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/",
+cleanCGM <- function(inputdirectory,
+                     outputdirectory,
                      device = "other",
                      combined = F,
                      calibration = F,
@@ -60,6 +60,7 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
                      impute = F,
                      saveplot = F) {
 
+  library(dplyr)
   if (device != "other" & combined == T) {
     stop(print("Only use combined=TRUE with device=other. Separate raw download files are expected for use with device options dexcom or libre. See README for help"))
   } else if (combined == F) {
@@ -109,7 +110,7 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
     }
 
     # indicates what device we are using the data from, possibly important to keep track of
-    cgm_dict <- dplyr::filter(cgm_dict, type == device)
+    cgm_dict <- dplyr::filter(cgm_dict, type==device)
     device_vars <- cgm_dict[cgm_dict$old_vars %in% names(table), ]
 
     cgm_dict <- device_vars
@@ -145,7 +146,7 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
     if (combined == F) {
       # order by timestamp
       table$subjectid <- Id
-      table$id <- unite(id, subjectid, deviceid)
+      table <- tidyr::unite(table,id,subjectid, deviceid)
       if (length(unique(table$id)) > 1) {
         table <- table[order(table$id, table$timestamp), ]
         print(paste("There is likely more than one Device ID in this individuals file. Check this ID if you are not expecting this:", Id))
@@ -369,29 +370,46 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
     table <- dplyr::filter(table, !is.na(table$sensorglucose))
 
     if (combined == F) {
+
+      #for IQR summary ribbons round time up to the nearest 5 min to make a neater summary line
+    summary_table<-table %>%
+      dplyr::mutate(date = as.Date(timestamp)) %>%
+      dplyr::mutate(time = hms::as_hms(timestamp)) %>%
+      dplyr::mutate(test=hms::round_hms(time, secs = 300))
+
       graph1 <- table %>%
         dplyr::mutate(date = as.Date(timestamp)) %>%
         dplyr::mutate(time = hms::as_hms(timestamp)) %>%
-        ggplot2::ggplot(aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
-        ggplot2::geom_path(aes(group = as.factor(date), colour = as.factor(date)), colour = "grey") +
-        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over:", as.numeric(round(difftime(max(table$timestamp), min(table$timestamp), "days"))), "days", "\n Raw data collected:", data_collected$percentage_datacollected_overstudy, "%")) +
+        ggplot2::ggplot(ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
+        ggplot2::geom_path(ggplot2::aes(group = as.factor(date), colour = as.factor(date)), colour = "grey") +
+        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over:", as.numeric(round(difftime(max(table$timestamp), min(table$timestamp), "days"))), "days", "\n Raw data collected:", round(mean(percentageexpectedwear$percentage_datacollected_overstudy, na.rm = T)), "%")) +
         ggplot2::theme_minimal() +
         ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
         # median hi low and IQR could be the same as each other...
-        ggplot2::stat_summary(aes(fill = "Median hilow"), fun.data = median_hilow, geom = "ribbon", alpha = 0.5, colour = "darkblue", show.legend = T) +
-        ggplot2::stat_summary(aes(fill = "IQR"), fun.data = function(x) {
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "10-90th Centile"),colour="transparent", fun.data = function(x) {
+          y <- quantile(x, c(0.1, 0.9))
+          names(y) <- c("ymin", "ymax")
+          y
+        }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "25-75th Centile"),colour="transparent", fun.data = function(x) {
           y <- quantile(x, c(0.25, 0.75))
           names(y) <- c("ymin", "ymax")
           y
-        }, geom = "ribbon", colour = "lightblue", alpha = 0.5, show.legend = T) +
+        }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "Median"),colour="transparent", fun.data = function(x) {
+          y <- quantile(x, c(0.5, 0.5))
+          names(y) <- c("ymin", "ymax")
+          y
+        }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose)), fun = "median", geom = "line", alpha = 0.5, colour = "orange",linewidth=1, show.legend = F) +
         ggplot2::theme(
           legend.position = c(0.85, 0.9), # Adjust the position of the legend box (top-right corner)
-          legend.background = element_rect(fill = "white", color = "black"), # Customize the legend box
-          legend.key.size = unit(0.5, "cm"), # Adjust the size of the legend keys
-          legend.text = element_text(size = 10), # Adjust the size of the legend text
-          legend.title = element_text(size = 12, face = "bold") # Adjust the size and style of the legend title
+          legend.background = ggplot2::element_rect(fill = "white", color = "black"), # Customize the legend box
+          legend.key.size = ggplot2::unit(0.5, "cm"), # Adjust the size of the legend keys
+          legend.text = ggplot2::element_text(size = 10), # Adjust the size of the legend text
+          legend.title = ggplot2::element_text(size = 12, face = "bold") # Adjust the size and style of the legend title
         ) +
-        ggplot2::scale_fill_manual("Key", values = c("lightblue", "darkblue")) +
+        ggplot2::scale_fill_manual("Key", values = c("lightblue", "darkblue","orange"),aesthetics = c("fill")) +
         ggplot2::scale_y_continuous(limits = c(2, (sensormax)), breaks = c(seq(2, sensormax, 2)))
 
       graphoutput_title <- cowplot::ggdraw(cowplot::plot_grid(
@@ -408,21 +426,37 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
         ggplot2::ggsave(paste0(outputdirectory, "graphs/", Id, "summaryCGM.pdf"), graphoutput_title, width = 6, height = 6)
       }
     } else if (combined == T) {
+      summary_table<-table %>%
+        dplyr::mutate(date = as.Date(timestamp)) %>%
+        dplyr::mutate(time = hms::as_hms(timestamp)) %>%
+        dplyr::mutate(test=hms::round_hms(time, secs = 300))
+
       graph1 <- table %>%
         dplyr::mutate(date = as.Date(timestamp)) %>%
         dplyr::mutate(time = hms::as_hms(timestamp)) %>%
         ggplot2::ggplot(ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
         ggplot2::geom_path(ggplot2::aes(group = interaction(as.factor(date), id), colour = as.factor(date)), colour = "grey") +
-        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over study", "\n Mean Raw data collected:", round(mean(percentageexpectedwear$percentage_datacollected_overstudy, na.rm = T)), "%")) +
+        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over study, N=",length(unique(table$id)), "\n Mean Raw data collected:", round(mean(percentageexpectedwear$percentage_datacollected_overstudy, na.rm = T)), "%")) +
         ggplot2::theme_minimal() +
         ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
         # median hi low and IQR could be the same as each other...
-        # ggplot2::stat_summary(ggplot2::aes(fill = "Median hilow"),fun.data = ggplot2::median_hilow, geom = "ribbon",alpha = 0.5, colour = "darkblue", show.legend = T)#+
-        ggplot2::stat_summary(ggplot2::aes(fill = "IQR"), fun.data = function(x) {
+        # median hi low and IQR could be the same as each other...
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "10-90th Centile"),colour="transparent", fun.data = function(x) {
+          y <- quantile(x, c(0.1, 0.9))
+          names(y) <- c("ymin", "ymax")
+          y
+        }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "25-75th Centile"),colour="transparent", fun.data = function(x) {
           y <- quantile(x, c(0.25, 0.75))
           names(y) <- c("ymin", "ymax")
           y
-        }, geom = "ribbon", colour = "lightblue", alpha = 0.5, show.legend = T) +
+        }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "Median"),colour="transparent", fun.data = function(x) {
+          y <- quantile(x, c(0.5, 0.5))
+          names(y) <- c("ymin", "ymax")
+          y
+        }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+        ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose)), fun = "median", geom = "line", alpha = 0.5, colour = "orange",linewidth=1, show.legend = F) +
         ggplot2::theme(
           legend.position = c(0.85, 0.9), # Adjust the position of the legend box (top-right corner)
           legend.background = ggplot2::element_rect(fill = "white", color = "black"), # Customize the legend box
@@ -430,8 +464,9 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
           legend.text = ggplot2::element_text(size = 10), # Adjust the size of the legend text
           legend.title = ggplot2::element_text(size = 12, face = "bold") # Adjust the size and style of the legend title
         ) +
-        ggplot2::scale_fill_manual("Key", values = c("lightblue", "darkblue")) +
+        ggplot2::scale_fill_manual("Key", values = c("lightblue", "darkblue","orange"),aesthetics = c("fill")) +
         ggplot2::scale_y_continuous(limits = c(2, (sensormax)), breaks = c(seq(2, sensormax, 2)))
+
 
       graph_list <- list()
       for (i in unique(table$id)) {
@@ -440,18 +475,33 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
           dplyr::mutate(date = as.Date(timestamp)) %>%
           dplyr::mutate(time = hms::as_hms(timestamp))
 
+        summary_table<-data %>%
+          dplyr::mutate(date = as.Date(timestamp)) %>%
+          dplyr::mutate(time = hms::as_hms(timestamp)) %>%
+          dplyr::mutate(test=hms::round_hms(time, secs = 300))
+
         graph_list[[i]] <- ggplot2::ggplot(data = data, ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
           ggplot2::geom_path(ggplot2::aes(group = interaction(as.factor(date), id), colour = as.factor(date)), colour = "grey") +
           ggplot2::labs(x = "Time", y = "Glucose", title = paste("Patient ID:", i, "\n Summary of CGM wear over:", as.numeric(round(difftime(max(data$timestamp), min(data$timestamp), "days"))), "days", "\n Raw data collected:", percentageexpectedwear$percentage_datacollected_overstudy[percentageexpectedwear$id == i], "%")) +
           ggplot2::theme_minimal() +
           ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
           # median hi low and IQR could be the same as each other...
-          ggplot2::stat_summary(ggplot2::aes(fill = "Median hilow"), fun.data = ggplot2::median_hilow, geom = "ribbon", alpha = 0.5, colour = "darkblue", show.legend = T) +
-          ggplot2::stat_summary(ggplot2::aes(fill = "IQR"), fun.data = function(x) {
+          ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "10-90th Centile"),colour="transparent", fun.data = function(x) {
+            y <- quantile(x, c(0.1, 0.9))
+            names(y) <- c("ymin", "ymax")
+            y
+          }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+          ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "25-75th Centile"),colour="transparent", fun.data = function(x) {
             y <- quantile(x, c(0.25, 0.75))
             names(y) <- c("ymin", "ymax")
             y
-          }, geom = "ribbon", colour = "lightblue", alpha = 0.5, show.legend = T) +
+          }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+          ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "Median"),colour="transparent", fun.data = function(x) {
+            y <- quantile(x, c(0.5, 0.5))
+            names(y) <- c("ymin", "ymax")
+            y
+          }, geom = "ribbon", alpha = 0.5, show.legend = T) +
+          ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose)), fun = "median", geom = "line", alpha = 0.5, colour = "orange",linewidth=1, show.legend = F) +
           ggplot2::theme(
             legend.position = c(0.85, 0.9), # Adjust the position of the legend box (top-right corner)
             legend.background = ggplot2::element_rect(fill = "white", color = "black"), # Customize the legend box
@@ -459,7 +509,7 @@ cleanCGM <- function(inputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/
             legend.text = ggplot2::element_text(size = 10), # Adjust the size of the legend text
             legend.title = ggplot2::element_text(size = 12, face = "bold") # Adjust the size and style of the legend title
           ) +
-          ggplot2::scale_fill_manual("Key", values = c("lightblue", "darkblue")) +
+          ggplot2::scale_fill_manual("Key", values = c("lightblue", "darkblue","orange"),aesthetics = c("fill")) +
           ggplot2::scale_y_continuous(limits = c(2, (sensormax)), breaks = c(seq(2, sensormax, 2)))
 
         if (saveplot == T) {
