@@ -61,6 +61,11 @@ cleanCGM <- function(inputdirectory,
                      saveplot = F) {
 
   library(dplyr)
+  # output directory is created and lists initialised
+  base::dir.create(outputdirectory, showWarnings = FALSE)
+  gaptestoutput <- list()
+  data_collected_output <- list()
+
   if (device != "other" & combined == T) {
     stop(print("Only use combined=TRUE with device=other. Separate raw download files are expected for use with device options dexcom or libre. See README for help"))
   } else if (combined == F) {
@@ -71,10 +76,7 @@ cleanCGM <- function(inputdirectory,
 
     # Read in data: anticipated structure is a single file containing raw CGM downloads per individual
     files <- base::list.files(path = inputdirectory, full.names = TRUE)
-    # output directory is created and lists initialised
-    base::dir.create(outputdirectory, showWarnings = FALSE)
-    gaptestoutput <- list()
-    data_collected_output <- list()
+
   } else if (device == "other" & combined == T) {
     file_path <- here::here("inst/extdata", "cgmvariable_dictionary.xlsx")
 
