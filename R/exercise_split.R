@@ -12,7 +12,7 @@
 #' @importFrom rio import export
 #' @importFrom dplyr mutate across contains filter select group_by inner_join slice ungroup arrange
 #' @import tidyr
-#' @importFrom lubridate parse_date_time
+#' @importFrom lubridate parse_date_time hours days
 #' @author Alice Carr
 #'
 #' @export
@@ -20,7 +20,10 @@
 #' @seealso
 #' analyseCGM and cleanCGM
 
-
+inputdirectory<-"/Users/alicecarr/Desktop/CGM/Reid Mclure/ResRep Study/data-clean/"
+exercisefile<-"/Users/alicecarr/Desktop/CGM/Reid Mclure/ResRep Study/exercise_start_end_final.xlsx"
+outputdirectory<-"/Users/alicecarr/Desktop/CGM/Reid Mclure/ResRep Study/"
+hourspostexercise<-6
 exercise_split <- function(inputdirectory,outputdirectory,exercisefile,hourspostexercise) {
 
 #load exercise file here:
@@ -55,7 +58,7 @@ exerciseinstance <- rio::import(exercisefile)
     table <- rio::import(files[f],guess_max = 1048576)
 
     table<-unique(table) #ensure the rep because of libre data isnt her
-    table<-filter(table,!is.na(sensorglucose))
+    table<-dplyr::filter(table,!is.na(sensorglucose))
 
     patid<-base::unlist(base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_"))[1]
     exercise_type <- base::strsplit(tools::file_path_sans_ext(basename(files[f])), "_")[[1]][2]
@@ -64,12 +67,12 @@ exerciseinstance <- rio::import(exercisefile)
 
     # exercise timestamps that we log to split the cgm data on (table)
     exerciseinstance_pt <- exerciseinstance %>%
-      filter(pt_id == patid, type==exercise_type) %>%
-      dplyr::mutate(durationmins = as.numeric(difftime(base::as.POSIXct(lubridate::parse_date_time(recovery_end, dateparseorder), tz = "UCT"), base::as.POSIXct(lubridate::parse_date_time(exercise_start, dateparseorder), tz = "UTC"),units = "mins"))) %>%
-      mutate(startdatetime=base::as.POSIXct(lubridate::parse_date_time(exercise_start, dateparseorder), tz = "UCT")) %>%
-      mutate(finishdatetime=base::as.POSIXct(lubridate::parse_date_time(recovery_end, dateparseorder), tz = "UCT")) %>%
-      select(-c(3:4)) %>%
-      arrange(startdatetime)
+      dplyr::filter(pt_id == patid, type==exercise_type) %>%
+      dplyr::mutate(startdatetime=base::as.POSIXct(lubridate::parse_date_time(startdatetime, dateparseorder), tz = "UCT")) %>%
+      dplyr::mutate(finishdatetime=base::as.POSIXct(lubridate::parse_date_time(finishdatetime, dateparseorder), tz = "UCT")) %>%
+      dplyr::mutate(durationmins = as.numeric(difftime(base::as.POSIXct(lubridate::parse_date_time(finishdatetime, dateparseorder), tz = "UCT"), base::as.POSIXct(lubridate::parse_date_time(startdatetime, dateparseorder), tz = "UTC"),units = "mins"))) %>%
+      dplyr::arrange(startdatetime) %>%
+      dplyr::select(pt_id,startdatetime,finishdatetime,type,durationmins)
 
     table$pt_id<-patid
     table$type<-exercise_type
@@ -104,8 +107,8 @@ exerciseinstance <- rio::import(exercisefile)
       #filter during sleep
       for (h in 1:length(splitlist$finishdatetime)) {
         filter_ls_00_06[[h]] <-table %>%
-          filter(timestamp >= base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +days(1),"00:00:00"),dateparseorder), tz = "UCT") &
-                   timestamp < base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]])+days(1),"06:00:00"),dateparseorder), tz = "UCT")) %>%
+          filter(timestamp >= base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +lubridate::days(1),"00:00:00"),dateparseorder), tz = "UCT") &
+                   timestamp < base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]])+lubridate::days(1),"06:00:00"),dateparseorder), tz = "UCT")) %>%
           dplyr::mutate(start_split = splitlist$finishdatetime[[h]],
                         startdatetime=splitlist$startdatetime[[h]],
                         finishdatetime = splitlist$finishdatetime[[h]]) %>%
@@ -120,7 +123,7 @@ exerciseinstance <- rio::import(exercisefile)
       for (h in 1:length(splitlist$startdatetime)) {
           filter_ls_24[[h]] <-table %>%
             filter(timestamp >= base::as.POSIXct(lubridate::parse_date_time(splitlist$finishdatetime[[h]], dateparseorder), tz = "UCT") &
-                   timestamp <=base::as.POSIXct(lubridate::parse_date_time(splitlist$finishdatetime[[h]] +hours(24),dateparseorder), tz = "UCT"))  %>%
+                   timestamp <=base::as.POSIXct(lubridate::parse_date_time(splitlist$finishdatetime[[h]] +lubridate::hours(24),dateparseorder), tz = "UCT"))  %>%
             dplyr::mutate(start_split = splitlist$startdatetime[[h]],
                           startdatetime=splitlist$startdatetime[[h]],
                           finishdatetime = splitlist$finishdatetime[[h]]) %>%
@@ -137,7 +140,7 @@ exerciseinstance <- rio::import(exercisefile)
       for (h in 1:length(splitlist$startdatetime)) {
         filter_ls_0[[h]] <-table %>%
           filter(timestamp >= base::as.POSIXct(lubridate::parse_date_time(splitlist$startdatetime[[h]], dateparseorder), tz = "UCT") &
-                   timestamp <=base::as.POSIXct(lubridate::parse_date_time(splitlist$finishdatetime[[h]] +hours(hourspostexercise),dateparseorder), tz = "UCT"))  %>%
+                   timestamp <=base::as.POSIXct(lubridate::parse_date_time(splitlist$finishdatetime[[h]] +lubridate::hours(hourspostexercise),dateparseorder), tz = "UCT"))  %>%
           dplyr::mutate(start_split = splitlist$startdatetime[[h]],
                         startdatetime=splitlist$startdatetime[[h]],
                         finishdatetime = splitlist$finishdatetime[[h]]) %>%
@@ -150,13 +153,13 @@ exerciseinstance <- rio::import(exercisefile)
 
       # filter until time from end of exercise to sleep
       for (h in 1:length(splitlist$finishdatetime)) {
-        filter_ls_00[[h]] <-test<-table %>%
-          filter(timestamp > splitlist$finishdatetime[[h]] & timestamp < base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +days(1),"00:00:00"),dateparseorder), tz = "UCT"))  %>%
+        filter_ls_00[[h]] <-table %>%
+          filter(timestamp > splitlist$finishdatetime[[h]] & timestamp < base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +lubridate::days(1),"00:00:00"),dateparseorder), tz = "UCT"))  %>%
            dplyr::mutate(start_split = splitlist$finishdatetime[[h]],
                           startdatetime=splitlist$startdatetime[[h]],
                           finishdatetime = splitlist$finishdatetime[[h]]) %>%
-            dplyr::mutate(diff = as.numeric(difftime(timestamp, finishdatetime, units = "hours"))) %>%
-          dplyr::mutate(diff_disc = ceiling(diff))
+            dplyr::mutate(diff = base::as.numeric(base::difftime(timestamp, finishdatetime, units = "hours"))) %>%
+          dplyr::mutate(diff_disc = base::ceiling(diff))
       }
 
       filter_fin_00[[f]] <-bind_rows(filter_ls_00)
@@ -164,8 +167,8 @@ exerciseinstance <- rio::import(exercisefile)
       # filter from 0600 the next day after exercise to midnight that next day
       for (h in 1:length(splitlist$finishdatetime)) {
         filter_ls_06_24[[h]] <-table %>%
-          filter(timestamp >= base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +days(1),"06:00:00"),dateparseorder), tz = "UCT") &
-                   timestamp< base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +days(2),"00:00:00"),dateparseorder), tz = "UCT"))  %>%
+          filter(timestamp >= base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +lubridate::days(1),"06:00:00"),dateparseorder), tz = "UCT") &
+                   timestamp< base::as.POSIXct(lubridate::parse_date_time(paste(as.Date(splitlist$finishdatetime[[h]]) +lubridate::days(2),"00:00:00"),dateparseorder), tz = "UCT"))  %>%
 
                    dplyr::mutate(start_split = splitlist$finishdatetime[[h]],
                                              startdatetime=splitlist$startdatetime[[h]],
