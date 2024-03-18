@@ -20,10 +20,6 @@
 #' @seealso
 #' analyseCGM and cleanCGM
 
-inputdirectory<-"/Users/alicecarr/Desktop/CGM/Reid Mclure/ResRep Study/data-clean/"
-exercisefile<-"/Users/alicecarr/Desktop/CGM/Reid Mclure/ResRep Study/exercise_start_end_final.xlsx"
-outputdirectory<-"/Users/alicecarr/Desktop/CGM/Reid Mclure/ResRep Study/"
-hourspostexercise<-6
 exercise_split <- function(inputdirectory,outputdirectory,exercisefile,hourspostexercise) {
 
 #load exercise file here:
