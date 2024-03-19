@@ -717,8 +717,10 @@ post exercise metrics.❗
 </tbody>
 </table>
 
-Also output are: - **exercisecharacterisitcs.xlsx** which is a summary
-of just the exact sensor glucose at the start and end time of exercise
+Also output are:
+
+-   **exercisecharacterisitcs.xlsx** which is a summary of just the
+    exact sensor glucose at the start and end time of exercise
 
 -   **all\_CGM.csv** which is all data from everyone with respect to
     exercise as below:

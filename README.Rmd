@@ -226,6 +226,7 @@ These files are structured slightly differently to the cleanCGM output with the 
 
 
 Also output are:
+
 - **exercisecharacterisitcs.xlsx** which is a summary of just the exact sensor glucose at the start and end time of exercise
 
 
