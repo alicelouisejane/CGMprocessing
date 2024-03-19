@@ -348,7 +348,7 @@ identified by a recordtype variable.
 
 The function will output:
 
-1.  **Cleaned CGM files** of the structure:
+-   **Cleaned CGM files** of the structure:
 
 <table>
 <thead>
@@ -387,7 +387,7 @@ The function will output:
 </tbody>
 </table>
 
-1.  **gap\_info.csv** Which provides information on the gaps in the
+-   **gap\_info.csv** Which provides information on the gaps in the
     data. It contains the timestamp and length of gap (diff) per ID:
 
 <table>
@@ -446,23 +446,25 @@ The function will output:
 </tbody>
 </table>
 
-1.  **percentage\_data\_collected\_info.csv** Which provides information
+-   **percentage\_data\_collected\_info.csv** Which provides information
     about the quality of the CGM data. This file will be per unique
-    device. This is why device id is an important variable to keep:
+    device. This is why device id is an important variable to keep.
+    Variables described below:
 
--   *percentage\_expectedwear\_overstudy* -percentage wear that was
-    expected over the study (usually expected lifetime of the sensor if
-    it is a 10 day wear (dexcom) or 14 day wear (libre), but some
-    studies might only require 3 days of wear, you can specify this in
-    the function arguments). It evaluates the length of time from the
-    maximum to minimum timestamp.
+    1.  *percentage\_expectedwear\_overstudy* -percentage wear that was
+        expected over the study (usually expected lifetime of the sensor
+        if it is a 10 day wear (dexcom) or 14 day wear (libre), but some
+        studies might only require 3 days of wear, you can specify this
+        in the function arguments). It evaluates the length of time from
+        the maximum to minimum timestamp.
 
--   *percentage\_datacollected\_overstudy* -percentage of actual data
-    collected. This tells us if there was drop out from the sensor,
-    counting the amount of time that the CGM actually measured.
+    2.  *percentage\_datacollected\_overstudy* -percentage of actual
+        data collected. This tells us if there was drop out from the
+        sensor, counting the amount of time that the CGM actually
+        measured.
 
--   *percentage\_dropout\_overstudy* -percentage of time that was lost
-    to drop out (inverse of the above)
+    3.  *percentage\_dropout\_overstudy* -percentage of time that was
+        lost to drop out (inverse of the above)
 
 <table>
 <colgroup>
@@ -549,7 +551,7 @@ In the diabetes exercise literature it is usual to assess:
     day)
 
 ![Example of relevant time periods post
-exercise](man/figures/exercise_periods.png)
+exercise](man/figures/exercise_periods_new.png)
 
 #### <a id="exercisefile-listofexercisetimestamps"></a> exercisefile - List of exercise time stamps
 
@@ -598,19 +600,19 @@ It should be structured as below:
 
 #### <a id="exercise_splitoutput"></a> exercise\_split output
 
--   Folders holding each timeperiod split are created automatically in
+-   Folders holding each time period split are created automatically in
     your *outputdirectory* as below: ![Exercise
     files](man/figures/exercisefiles.png)
 
 -The files in this folder are named automatically corresponding to the
-timeperiod they are in eg. files in **data-after\_24** are named as:
+time period they are in eg. files in **data-after\_24** are named as:
 *ID\_exercisetype\_24.csv*, for **data-after\_0000\_0600** are named as:
 *ID\_exercisetype\_00\_06.csv* etc.
 
 ❗ **Important:** File naming structure is required for the analyseCGM()
 function. Creating a unique file for each individual for each time
 period allows us to get a global table of CGM metrics for each of these
-timeperiods which is easier to then taken on for further analysis.❗
+time periods which is easier to then taken on for further analysis.❗
 
 -   For ease the folder data-all are all the files in one folder. You
     can then point ot this one folder when you run analyseCGM().
@@ -622,7 +624,7 @@ with the addition of the variables:
     exercise etc which is specified in the exercisefile
 
 -   **start\_split**: Sensor glucose timestamp where the split began ie.
-    the closedst within the CGM interval that matched the start of
+    the closest within the CGM interval that matched the start of
     exercise
 
 -   **startdatetime**: Exercise start timestamp from exercise file
@@ -714,6 +716,12 @@ post exercise metrics.❗
 </tr>
 </tbody>
 </table>
+
+Also output are: - **exercisecharacterisitcs.xlsx** which is a summary
+of just the exact sensor glucose at the start and end time of exercise -
+**all\_CGM.csv** which is all data from everyone with respect to
+exercise as below: ![all\_CGM.csv
+output](man/figures/allcgm_explanation.png)
 
 ------------------------------------------------------------------------
 

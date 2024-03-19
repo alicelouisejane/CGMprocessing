@@ -131,6 +131,7 @@ cleanCGM <- function(inputdirectory,
       table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
     }
 
+
     # this get rid of the first lines in dexcom as all these rows miss a timestamp
     # but also gets rid of any problematic missing rows
     table <- dplyr::filter(table, !is.na(timestamp))
@@ -176,6 +177,9 @@ cleanCGM <- function(inputdirectory,
     if (grepl("dexcom", device)) {
       # change instances of low/ high to sensor limits
       table$sensorglucose <- as.character(table$sensorglucose)
+      # DO NOT INCLUDE ANY OTHER RECODS OTHER THAN CGM ie. NOT calibration value for dexcom g5 - g4 is different and requires manual calibrations as below
+      table <- dplyr::filter(table, eventtype == "EGV")
+      table <- dplyr::select(table, -c(eventtype))
       base::suppressWarnings(
         table <- table %>% dplyr::mutate(sensorglucose = dplyr::case_when(
           grepl("low", sensorglucose, ignore.case = TRUE) ~ "2.2",

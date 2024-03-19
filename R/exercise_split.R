@@ -35,6 +35,7 @@ exerciseinstance <- rio::import(exercisefile)
   filter_fin_00_06 <-list() # filter glucose during sleep
   filter_fin_24 <-list() # filter glucose from end of exercise to 24hrs after
   all_cgm <- list() # all cgm data
+  exercise_characteristics <-list() #glucose at exact start and exact end only
 
   base::dir.create(paste0(outputdirectory,"data-", "after_",hourspostexercise, "hrs"), showWarnings = F)
   base::dir.create(paste0(outputdirectory,"data-after_0000/"), showWarnings = F)
@@ -112,7 +113,7 @@ exerciseinstance <- rio::import(exercisefile)
         dplyr::mutate(diff_disc = ceiling(diff))
       }
 
-      filter_fin_00_06[[f]] <- test<-bind_rows(filter_ls_00_06)
+      filter_fin_00_06[[f]] <- bind_rows(filter_ls_00_06)
 
 
       # filter to 24h post exercise
@@ -177,8 +178,11 @@ exerciseinstance <- rio::import(exercisefile)
 
       allcgm<-table %>%
         dplyr::inner_join(exerciseinstance_pt, by = c("pt_id","type"),multiple="all") %>%
-        dplyr::mutate(diff = as.numeric(difftime(timestamp, finishdatetime, units = "hours"))) %>%
-        dplyr::mutate(diff_disc = ifelse(diff>0,ceiling(diff),floor(diff)))
+        dplyr::mutate(diff_finish = as.numeric(difftime(timestamp, finishdatetime, units = "hours"))) %>%
+        dplyr::mutate(diff_start = as.numeric(difftime(timestamp, startdatetime, units = "hours"))) %>%
+        dplyr::mutate(diff_disc = ifelse(diff_finish>0,ceiling(diff_finish),
+                                         ifelse(timestamp>=startdatetime & timestamp<=finishdatetime,0,
+                                                ifelse(diff_start<0,floor(diff_start),NA))))
 
 # start time exercise characteristics
       exercise_characteristics_s<- exerciseinstance_pt %>%
@@ -202,7 +206,7 @@ exerciseinstance <- rio::import(exercisefile)
         rename(end_sensorglucose=sensorglucose) %>%
         select(pt_id, type,startdatetime,finishdatetime,durationmins,end_sensorglucose)
 
-      exercise_characteristics <-list()
+
       exercise_characteristics[[f]]<- merge(exercise_characteristics_s,exercise_characteristics_f)
 
     all_cgm[[f]] <- allcgm
@@ -210,7 +214,7 @@ exerciseinstance <- rio::import(exercisefile)
 
   # all CGM trace to plot the trace if needed
   all_cgm_fin <- bind_rows(all_cgm[!sapply(all_cgm, is.null)])
-  rio::export(all_cgm_fin,paste0(outputdirectory,"/all_CGM.xlsx")) # this is all data from all patients in one file
+  rio::export(all_cgm_fin,paste0(outputdirectory,"/all_CGM.csv")) # this is all data from all patients in one file
 
   all_characteristics_fin <- bind_rows(exercise_characteristics[!sapply(exercise_characteristics, is.null)])
   rio::export(all_characteristics_fin,paste0(outputdirectory,"/exercisecharactersitics.xlsx"))

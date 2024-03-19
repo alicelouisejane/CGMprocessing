@@ -27,6 +27,7 @@ Imports:
     purrr,
     rio,
     stats,
+    stringr,
     tidyr,
     tools,
     zoo

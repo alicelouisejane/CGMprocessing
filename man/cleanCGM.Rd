@@ -5,9 +5,8 @@
 \title{cleanCGM}
 \usage{
 cleanCGM(
-  inputdirectory =
-    "/Users/alicecarr/Desktop/DIAGNODE-2_Data/CGM_RANDOMISED_preprocessed.csv",
-  outputdirectory = "/Users/alicecarr/Desktop/DIAGNODE-2_Data/",
+  inputdirectory,
+  outputdirectory,
   device = "other",
   combined = F,
   calibration = F,
