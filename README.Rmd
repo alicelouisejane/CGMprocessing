@@ -193,7 +193,7 @@ It should be structured as below:
 - Folders holding each time period split are created automatically in your _outputdirectory_ as below:
 ![Exercise files](man/figures/exercisefiles.png)
 
--The files in this folder are named automatically corresponding to the time period they are in eg. files in **data-after_24**  are named as: _ID_exercisetype_24.csv_, for  **data-after_0000_0600** are named as: _ID_exercisetype_00_06.csv_ etc. 
+- The files in this folder are named automatically corresponding to the time period they are in eg. files in **data-after_24**  are named as: _ID_exercisetype_24.csv_, for  **data-after_0000_0600** are named as: _ID_exercisetype_00_06.csv_ etc. 
 
 ❗ **Important:**  File naming structure is required for the analyseCGM() function. Creating a unique file for each individual for each time period allows us to get a global table of CGM metrics for each of these time periods which is easier to then taken on for further analysis.❗ 
 
@@ -224,9 +224,13 @@ These files are structured slightly differently to the cleanCGM output with the 
 | 2022-03-16 00:15:49 | 5                 | FRC1      | cooldown | 2022-03-15 09:50:48 | 2022-03-15 08:40:48 | 2022-03-15 09:50:48 | 14.4169444444444 | 15            |
 
 
+
 Also output are:
 - **exercisecharacterisitcs.xlsx** which is a summary of just the exact sensor glucose at the start and end time of exercise
+
+
 - **all_CGM.csv** which is all data from everyone with respect to exercise as below: 
+
 ![all_CGM.csv output](man/figures/allcgm_explanation.png)   
 
 ___

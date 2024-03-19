@@ -604,10 +604,10 @@ It should be structured as below:
     your *outputdirectory* as below: ![Exercise
     files](man/figures/exercisefiles.png)
 
--The files in this folder are named automatically corresponding to the
-time period they are in eg. files in **data-after\_24** are named as:
-*ID\_exercisetype\_24.csv*, for **data-after\_0000\_0600** are named as:
-*ID\_exercisetype\_00\_06.csv* etc.
+-   The files in this folder are named automatically corresponding to
+    the time period they are in eg. files in **data-after\_24** are
+    named as: *ID\_exercisetype\_24.csv*, for **data-after\_0000\_0600**
+    are named as: *ID\_exercisetype\_00\_06.csv* etc.
 
 ❗ **Important:** File naming structure is required for the analyseCGM()
 function. Creating a unique file for each individual for each time
@@ -718,10 +718,12 @@ post exercise metrics.❗
 </table>
 
 Also output are: - **exercisecharacterisitcs.xlsx** which is a summary
-of just the exact sensor glucose at the start and end time of exercise -
-**all\_CGM.csv** which is all data from everyone with respect to
-exercise as below: ![all\_CGM.csv
-output](man/figures/allcgm_explanation.png)
+of just the exact sensor glucose at the start and end time of exercise
+
+-   **all\_CGM.csv** which is all data from everyone with respect to
+    exercise as below:
+
+![all\_CGM.csv output](man/figures/allcgm_explanation.png)
 
 ------------------------------------------------------------------------
 
