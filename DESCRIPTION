@@ -1,6 +1,6 @@
 Package: CGMprocessing
 Title: Clean CGM analysis in Diabetes clinical research
-Version: 0.0.1.0
+Version: 1.0.0
 Authors@R: 
     person("Alice", "Carr", , "acarr1@ualberta.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0704-8843"))
@@ -30,6 +30,7 @@ Imports:
     stringr,
     tidyr,
     tools,
+    utils,
     zoo
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

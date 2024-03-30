@@ -6,7 +6,7 @@
 \usage{
 analyseCGM(
   exercise = F,
-  hourspostexercise,
+  hourspostexercise = NULL,
   combined = F,
   analysesensorlifetime = T,
   libre = T,

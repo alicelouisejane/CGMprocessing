@@ -12,6 +12,7 @@
 #' @importFrom rio import export
 #' @importFrom dplyr mutate across contains filter select group_by inner_join slice ungroup arrange
 #' @import tidyr
+#' @import utils
 #' @importFrom lubridate parse_date_time hours days
 #' @author Alice Carr
 #'
@@ -207,7 +208,7 @@ exerciseinstance <- rio::import(exercisefile)
         select(pt_id, type,startdatetime,finishdatetime,durationmins,end_sensorglucose)
 
 
-      exercise_characteristics[[f]]<- merge(exercise_characteristics_s,exercise_characteristics_f)
+      exercise_characteristics[[f]]<- base::merge(exercise_characteristics_s,exercise_characteristics_f)
 
     all_cgm[[f]] <- allcgm
   }

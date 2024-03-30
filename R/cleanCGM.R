@@ -32,11 +32,13 @@
 #' @importFrom rio import export
 #' @importFrom dplyr mutate summarise n lead across contains filter select group_by inner_join slice ungroup arrange bind_rows rename
 #' @import tidyr
+#' @import utils
 #' @importFrom cowplot plot_grid ggdraw draw_label
 #' @import ggplot2
 #' @import hms
 #' @importFrom tools file_path_sans_ext
 #' @importFrom anytime anytime
+#' @import stats
 #' @importFrom here here
 #' @import stringr
 #' @import data.table
@@ -60,7 +62,6 @@ cleanCGM <- function(inputdirectory,
                      impute = F,
                      saveplot = F) {
 
-  library(dplyr)
   # output directory is created and lists initialised
   base::dir.create(outputdirectory, showWarnings = FALSE)
   gaptestoutput <- list()
@@ -119,7 +120,7 @@ cleanCGM <- function(inputdirectory,
     # rename the variables to standardised variables names
     colnames(table) <- dplyr::recode(
       colnames(table),
-      !!!setNames(as.character(cgm_dict$new_vars), cgm_dict$old_vars)
+      !!!stats::setNames(as.character(cgm_dict$new_vars), cgm_dict$old_vars)
     )
 
     # try to anticipate problematic dates
@@ -250,7 +251,7 @@ cleanCGM <- function(inputdirectory,
           dplyr::mutate(date = as.Date(timestamp)) %>%
           dplyr::select(id, date) %>%
           unique() %>%
-          merge(calibration_merged, by = c("id", "date"), all = T) %>%
+          base::merge(calibration_merged, by = c("id", "date"), all = T) %>%
           dplyr::mutate(remove = ifelse(is.na(MD), 1, remove)) %>% # if missing MD this means calibration were not perfomed on this day. usually calibrations are done everyday in those sensor that required calibration. these dates should also be removed from CGM
           dplyr::group_by(id) %>%
           dplyr::mutate(num_days_wear = dplyr::n()) %>%
@@ -263,7 +264,7 @@ cleanCGM <- function(inputdirectory,
 
         # remove bad calibrated days/ days where no calibration was performed
         table <- table_cal %>%
-          dplyr::merge(remove, by = c("id", "date"), all = T) %>%
+          base::merge(remove, by = c("id", "date"), all = T) %>%
           dplyr::filter(is.na(remove)) %>%
           dplyr::select(-remove)
 
@@ -348,7 +349,7 @@ cleanCGM <- function(inputdirectory,
           dplyr::mutate(percentage_expectedwear_overstudy = as.numeric((round(difftime(max(timestamp), min(timestamp), units = "hours")) / expectedtime) * 100)) %>%
           select(id, percentage_expectedwear_overstudy) %>%
           unique() %>%
-          merge(percentage_dropout, by = "id", all = T) %>%
+          base::merge(percentage_dropout, by = "id", all = T) %>%
           mutate(totallosttime = ifelse(is.na(totallosttime), 0, totallosttime)) %>%
           mutate(percentage_datacollected_overstudy = ((expectedtime_mins - totallosttime) / expectedtime_mins) * 100) %>%
           mutate(percentage_dropout_overstudy = (totallosttime / expectedtime_mins) * 100)
@@ -379,12 +380,12 @@ cleanCGM <- function(inputdirectory,
 
       #for IQR summary ribbons round time up to the nearest 5 min to make a neater summary line
     summary_table<-table %>%
-      dplyr::mutate(date = as.Date(timestamp)) %>%
+      dplyr::mutate(date = base::as.Date(timestamp)) %>%
       dplyr::mutate(time = hms::as_hms(timestamp)) %>%
       dplyr::mutate(test=hms::round_hms(time, secs = interval*60))
 
       graph1 <- table %>%
-        dplyr::mutate(date = as.Date(timestamp)) %>%
+        dplyr::mutate(date = base::as.Date(timestamp)) %>%
         dplyr::mutate(time = hms::as_hms(timestamp)) %>%
         ggplot2::ggplot(ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
         ggplot2::geom_path(ggplot2::aes(group = as.factor(date), colour = as.factor(date)), colour = "grey") +
@@ -393,17 +394,17 @@ cleanCGM <- function(inputdirectory,
         ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
         # median hi low and IQR could be the same as each other...
         ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "10-90th Centile"),colour="transparent", fun.data = function(x) {
-          y <- quantile(x, c(0.1, 0.9))
+          y <- stats::quantile(x, c(0.1, 0.9))
           names(y) <- c("ymin", "ymax")
           y
         }, geom = "ribbon", alpha = 0.5, show.legend = T) +
         ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "25-75th Centile"),colour="transparent", fun.data = function(x) {
-          y <- quantile(x, c(0.25, 0.75))
+          y <- stats::quantile(x, c(0.25, 0.75))
           names(y) <- c("ymin", "ymax")
           y
         }, geom = "ribbon", alpha = 0.5, show.legend = T) +
         ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "Median"),colour="transparent", fun.data = function(x) {
-          y <- quantile(x, c(0.5, 0.5))
+          y <- stats::quantile(x, c(0.5, 0.5))
           names(y) <- c("ymin", "ymax")
           y
         }, geom = "ribbon", alpha = 0.5, show.legend = T) +
@@ -450,17 +451,17 @@ cleanCGM <- function(inputdirectory,
         # median hi low and IQR could be the same as each other...
         # median hi low and IQR could be the same as each other...
         ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "10-90th Centile"),colour="transparent", fun.data = function(x) {
-          y <- quantile(x, c(0.1, 0.9))
+          y <- stats::quantile(x, c(0.1, 0.9))
           names(y) <- c("ymin", "ymax")
           y
         }, geom = "ribbon", alpha = 0.5, show.legend = T) +
         ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "25-75th Centile"),colour="transparent", fun.data = function(x) {
-          y <- quantile(x, c(0.25, 0.75))
+          y <- stats::quantile(x, c(0.25, 0.75))
           names(y) <- c("ymin", "ymax")
           y
         }, geom = "ribbon", alpha = 0.5, show.legend = T) +
         ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "Median"),colour="transparent", fun.data = function(x) {
-          y <- quantile(x, c(0.5, 0.5))
+          y <- stats::quantile(x, c(0.5, 0.5))
           names(y) <- c("ymin", "ymax")
           y
         }, geom = "ribbon", alpha = 0.5, show.legend = T) +
@@ -495,17 +496,17 @@ cleanCGM <- function(inputdirectory,
           ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
           # median hi low and IQR could be the same as each other...
           ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "10-90th Centile"),colour="transparent", fun.data = function(x) {
-            y <- quantile(x, c(0.1, 0.9))
+            y <- stats::quantile(x, c(0.1, 0.9))
             names(y) <- c("ymin", "ymax")
             y
           }, geom = "ribbon", alpha = 0.5, show.legend = T) +
           ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "25-75th Centile"),colour="transparent", fun.data = function(x) {
-            y <- quantile(x, c(0.25, 0.75))
+            y <- stats::quantile(x, c(0.25, 0.75))
             names(y) <- c("ymin", "ymax")
             y
           }, geom = "ribbon", alpha = 0.5, show.legend = T) +
           ggplot2::stat_summary(data = summary_table,ggplot2::aes(x = as.POSIXct(test, format = "%H:%M:%S"), y = as.numeric(sensorglucose),fill = "Median"),colour="transparent", fun.data = function(x) {
-            y <- quantile(x, c(0.5, 0.5))
+            y <- stats::quantile(x, c(0.5, 0.5))
             names(y) <- c("ymin", "ymax")
             y
           }, geom = "ribbon", alpha = 0.5, show.legend = T) +

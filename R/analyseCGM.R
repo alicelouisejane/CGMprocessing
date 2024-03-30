@@ -41,7 +41,7 @@
 #'@param printname Prints name of the file being processed. Default is TRUE.
 #'
 #' @importFrom rio import export
-#' @importFrom dplyr mutate across contains filter select group_by inner_join slice ungroup arrange if_else
+#' @importFrom dplyr mutate across contains filter select group_by inner_join slice ungroup arrange if_else lag lead
 #' @importFrom tools file_path_sans_ext
 #' @importFrom janitor clean_names
 #' @importFrom anytime anytime
@@ -54,6 +54,7 @@
 #' @import pastecs
 #' @import zoo
 #' @import purrr
+#' @import utils
 #'
 #' @author Alice Carr
 #'
@@ -66,7 +67,7 @@
 
 
 analyseCGM <- function(exercise = F,
-                       hourspostexercise,
+                       hourspostexercise=NULL,
                        combined=F,
                        analysesensorlifetime=T,
                        libre=T,
@@ -80,59 +81,73 @@ analyseCGM <- function(exercise = F,
                        format = "rows",
                        printname = T) {
 
+
   if(combined==F){
   # define lists
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
+  if(exercise==T){
   cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(files)))
   base::colnames(cgmupload) <- base::rep("Record", base::length(files))
+  }else if(exercise==F){
+    #adding this in as i now have metrics for different parts of the day : all, day time and nighttime
+    #wouldnt use this with exercicse =T
+    cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(files)*3))
+    base::colnames(cgmupload) <- base::rep("Record", base::length(files)*3)
+  }
   }else if(combined==T){
     table_test<-rio::import(inputdirectory)
     files<-split(table_test,table_test$id)
+    if(exercise==T){
     cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(unique(table_test$id))))
     base::colnames(cgmupload) <- base::rep("Record", base::length(unique(table_test$id)))
+    }else if(exercise==F){
+      #adding this in as i now have metrics for different parts of the day : all, day time and nighttime
+      #wouldnt use this with exercicse =T
+      cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(unique(table_test$id))*3))
+      base::colnames(cgmupload) <- base::rep("Record", base::length(unique(table_test$id))*3)
+
+    }
   }
 
 
-  for (f in 1:base::length(files)) {
+
+  for (file in 1:base::length(files)) {
     if(combined==F & analysesensorlifetime==T){
-    table <-  base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
+    table <-  base::suppressWarnings(rio::import(files[file], guess_max = 10000000))
     #Id <- unique(table$id)
-    Id <- base::unlist(tools::file_path_sans_ext(basename(files[f])), "_")
+    Id <- base::unlist(tools::file_path_sans_ext(basename(files[file])), "_")
 
     names(table) <- tolower(names(table))
-    cgmupload["subject_id", f] <- Id
     table <- unique(table)
     if (printname == T) {
-      print(basename(files[f]))
+      print(basename(files[file]))
     }
     }else if(combined==F & analysesensorlifetime==F){
-      table <-  base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
+      table <-  base::suppressWarnings(rio::import(files[file], guess_max = 10000000))
       #Id <- unique(table$id)
       table$id<-sub("_[^_]*$", "", table$id) # if expecting > sensor lifetime then get rid of device id in the underscore
-      Id <- base::unlist(tools::file_path_sans_ext(basename(files[f])), "_")
+      Id <- base::unlist(tools::file_path_sans_ext(basename(files[file])), "_")
       names(table) <- tolower(names(table))
-      cgmupload["subject_id", f] <- Id
+     # cgmupload["subject_id", f] <- Id
       table <- unique(table)
       if (printname == T) {
-        print(basename(files[f]))
+        print(basename(files[file]))
       }
     }else if(combined==T & analysesensorlifetime==T){
-      table <-  files[[f]]
-      #Id <- unique(table$id)
+      table <-  files[[file]]
       Id <- unique(table$id)
       names(table) <- tolower(names(table))
-      cgmupload["subject_id", f] <- Id
+      #cgmupload["subject_id", f] <- Id
       table <- unique(table)
       if (printname == T) {
         print(Id)
       }
     }else if(combined==T & analysesensorlifetime==F){
-      table <-  files[[f]]
+      table <-  files[[file]]
       table$id<- sub("_[^_]*$", "", table$id) # if expecting > sensor lifetime then get rid of device id in the underscore
-      #Id <- unique(table$id)
       Id <- unique(table$id)
       names(table) <- tolower(names(table))
-      cgmupload["subject_id", f] <- Id
+      #cgmupload["subject_id", f] <- Id
       table <- unique(table)
       print(Id)
     }
@@ -145,7 +160,7 @@ analyseCGM <- function(exercise = F,
 
 
     if (is.null(length(table$sensorglucose)) | length(table$sensorglucose) == 1 | length(table$sensorglucose) == 0) {
-      print(base::paste(files[f], "not enought data"))
+      print(base::paste(files[file], "not enought data"))
       next
     }
 
@@ -168,37 +183,79 @@ analyseCGM <- function(exercise = F,
 
     # if there is no readings or 1 reading not enough data
     if (is.null(length(table$sensorglucose)) | length(table$sensorglucose) == 1 | length(table$sensorglucose) == 0) {
-      print(base::paste(files[f], "not enought data"))
+      print(base::paste(files[file], "not enought data"))
       next
     }
 
 
-    # this is for in house use with development ongoing
-    if (exercise == T) {
-      hourspostexercise==hourspostexercise
-      table$date<-as.Date(table$timestamp)
-      cgmupload["exercise", f]<-"TRUE"
-      #time in range for exercise 7-15 mmol/L from Lancet guidelines
-      exercisetime<- nrow(table[table$diff_disc==0,]) * interval
-      if(exercisetime>0){
-      BGinrangeexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc==0)], length = 1)
-      BGinrangeexercise <- ifelse(BGinrangeexercise %in% seq(7, 15, 0.01), 1, 0)
-      cgmupload["min_spent_7_15_exercise", f] <-base::round(base::sum(BGinrangeexercise) * (interval / 60), digits = 2)
-      cgmupload["percent_time_7_15_exercise", f] <- base::round(((base::sum(BGinrangeexercise) * (interval / 60)) * 60 / exercisetime) * 100, digits = 2)
-      #recommended post exercise 5-12
-      postexercisetime<- nrow(table[table$diff_disc>0 & table$diff_disc<=hourspostexercise,]) * 300
-      BGinrangepostexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc!=0)], length = 1)
-      BGinrangepostexercise <- ifelse(BGinrangepostexercise %in% seq(7, 15, 0.01), 1, 0)
-      cgmupload["min_spent_5_12_exercise", f] <-base::round(base::sum(BGinrangepostexercise) * (interval / 60), digits = 2)
-      cgmupload["percent_time_5_12_exercise", f] <- base::round(((base::sum(BGinrangepostexercise) * (interval / 60)) * 60 / postexercisetime) * 100, digits = 2)
+    # metrics for 24hours overnight and day
+
+  if(exercise==T){
+    table_list<-list(table)
+  }else if(exercise==F){
+    #all time
+    table_24<-table
+
+    #day time 6am to midnight
+    table_day<-dplyr::filter(table,lubridate::hour(table$timestamp) >= 6 & hour(table$timestamp) < 24) %>%
+      dplyr::arrange(timestamp)
+
+    #sleep midnight to 6am
+    table_night<-dplyr::filter(table,lubridate::hour(table$timestamp) <6) %>%
+      dplyr::arrange(timestamp)
+
+    table_list<-list(table_24,table_day,table_night)
+    time_of_day_list<-c("all time","day time","night time")
+    # Identify positions of empty data frames
+    empty_positions <- sapply(table_list, function(df) nrow(df) == 0)
+
+    # Remove elements from both lists
+    table_list <- table_list[!empty_positions]
+    time_of_day_list <- time_of_day_list[!empty_positions]
+  }
+
+
+    for(f in seq_along(table_list)){
+      table<- table_list[[f]]
+      table$timeofday<-time_of_day_list[f]
+      # specific TIR for exercise from lancet guidelines, input file must be set up specifically
+      if (exercise == T) {
+        f<-f
+        cgmupload["subject_id", f] <- Id
+        # files not set up correctly
+        if (is.null(hourspostexercise) | !("diff_disc" %in% names(table))) {
+          stop("Input files not set up correctly for this step- refer to README. Ensure you also use hourspostexercise argument to specify time of interest post-exercise.")
+        }
+        hours_post_exercise==hourspostexercise
+        table$date<-as.Date(table$timestamp)
+        cgmupload["exercise", f]<-"TRUE"
+        cgmupload["hourspostexercise", f]<-hours_post_exercise
+        #time in range for exercise 7-15 mmol/L from Lancet guidelines
+        exercisetime<- nrow(table[table$diff_disc==0,]) * interval
+        if(exercisetime>0){
+          BGinrangeexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc==0)], length = 1)
+          BGinrangeexercise <- ifelse(BGinrangeexercise %in% seq(7, 15, 0.01), 1, 0)
+          cgmupload["min_spent_7_15_exercise", f] <-base::round(base::sum(BGinrangeexercise) * (interval / 60), digits = 2)
+          cgmupload["percent_time_7_15_exercise", f] <- base::round(((base::sum(BGinrangeexercise) * (interval / 60)) * 60 / exercisetime) * 100, digits = 2)
+          #recommended post exercise 5-12
+          postexercisetime<- nrow(table[table$diff_disc>0 & table$diff_disc<=hours_post_exercise,]) * 300
+          BGinrangepostexercise <- base::as.numeric(table$sensorglucose[base::which(table$diff_disc!=0)], length = 1)
+          BGinrangepostexercise <- ifelse(BGinrangepostexercise %in% seq(7, 15, 0.01), 1, 0)
+          cgmupload["min_spent_5_12_exercise", f] <-base::round(base::sum(BGinrangepostexercise) * (interval / 60), digits = 2)
+          cgmupload["percent_time_5_12_exercise", file] <- base::round(((base::sum(BGinrangepostexercise) * (interval / 60)) * 60 / postexercisetime) * 100, digits = 2)
+        }
+
+        # ensure now the table is only timevalues after exercise ie. diff disc !=0
+        table<-filter(table,diff_disc!=0)
       }
 
-      # ensure now the table is only timevalues after exercise ie. diff disc !=0
-      table<-filter(table,diff_disc!=0)
-    }
 
 
-
+      if(exercise==F){
+      f<-(seq(0,ncol(cgmupload),3)[file])+f
+      cgmupload["time_of_day",f]<- unique(table$timeofday)
+      cgmupload["subject_id", f] <- Id
+      }
 
     # Total time in the dataset is the whole length of the dataset x 300 as each row represetns 300 seconds (5mins)
     #table will have been interpoated in preprocessing, the number of minutes/cgm points interpolated can be derived from that output file
@@ -226,6 +283,7 @@ analyseCGM <- function(exercise = F,
 
     # number of readings- wouldnt include interpolated, if we were to include interpolation it should be in this function after this call
     cgmupload["total_sensor_readings", f] <- base::as.numeric(base::nrow(unique(table[!is.na(table$sensorglucose),])))
+
 
     # Average sensor glucose
     cgmupload["average_sensor", f] <- base::round(base::mean(table$sensorglucose[base::which(!is.na(table$sensorglucose))], na.rm = T), digits = 2)
@@ -300,11 +358,12 @@ analyseCGM <- function(exercise = F,
 
 
     # perform run length encoding to find "true" excursions that are >excursion length defined in function (15mins usually)
-    BGover10 <- base::as.numeric(table10$BGover10, length = 1)
+    #padd with 0s to ensure this works if ending in 1
+    BGover10 <- as.numeric(table10$BGover10,length=1)
     BG10.rle <- base::rle(BGover10)
     over10loc <- base::matrix(nrow = 0, ncol = 3)
     over10loc$values <- BG10.rle$values
-    over10loc$position <- cumsum(BG10.rle$lengths) + 1
+    over10loc$position <- base::cumsum(BG10.rle$lengths) + 1
     over10loc$lengths <- BG10.rle$lengths
     over10loc$lengthstrue <- BG10.rle$lengths - 1
     over10loc <- base::as.data.frame(over10loc)
@@ -315,7 +374,7 @@ analyseCGM <- function(exercise = F,
 
     # from the run length encoding find the positions where the true excursion started
     # and replace these values with a 1 in the new column which was replaced with the original sensor glucose values
-    positions10 <- lag(over10loc$position)[which(over10loc$true == T)]
+    positions10 <- dplyr::lag(over10loc$position)[which(over10loc$true == T)]
     if (over10loc$values[1] == 1 & over10loc$true[1] == T) {
       positions10[1] <- 1
     }
@@ -403,7 +462,7 @@ analyseCGM <- function(exercise = F,
 
     # from the run length encoding find the positions where the true excursion started
     # and replace these values with a 1 in the new column which was replaced with the original sensor glucose values
-    positions13 <- lag(over13loc$position)[which(over13loc$true == T)]
+    positions13 <- dplyr::lag(over13loc$position)[which(over13loc$true == T)]
     if (over13loc$values[1] == 1 & over13loc$true[1] == T) {
       positions13[1] <- 1
     }
@@ -489,7 +548,7 @@ analyseCGM <- function(exercise = F,
 
     # from the run length encoding find the positions where the true excursion started
     # and replace these values with a 1 in the new column which was replaced with the original sensor glucose values
-    positions16 <- lag(over16loc$position)[which(over16loc$true == T)]
+    positions16 <- dplyr::lag(over16loc$position)[which(over16loc$true == T)]
     if (over16loc$values[1] == 1 & over16loc$true[1] == T) {
       positions16[1] <- 1
     }
@@ -583,7 +642,7 @@ analyseCGM <- function(exercise = F,
 
     # from the run length encoding find the positions where the true excursion started
     # and replace these values with a 1 in the new column which was replaced with the original sensor glucose values
-    positionshypo <- lag(under3loc$position)[which(under3loc$true == T)]
+    positionshypo <- dplyr::lag(under3loc$position)[which(under3loc$true == T)]
     if (under3loc$values[1] == 1 & under3loc$true[1] == T) {
       positionshypo[1] <- 1
     }
@@ -607,7 +666,7 @@ analyseCGM <- function(exercise = F,
     # this part deals with the scenario 1 0 2 to fill the 0 in and turns everything into 1s, 0s, 2s
     hypo <- hypo %>% dplyr::mutate(BGunder3 = dplyr::case_when(
       BGunder3 != 1 & BGunder3 < 3.9 ~ 2,
-      lag(BGunder3) == 1 & lead(BGunder3) == 2 ~ 2,
+      dplyr::lag(BGunder3) == 1 & dplyr::lead(BGunder3) == 2 ~ 2,
       BGunder3 == 1 ~ 1,
       TRUE ~ 0
     ))
@@ -659,11 +718,11 @@ analyseCGM <- function(exercise = F,
     # all 2s at the end of a 1 sequence chnaged to 1s
     hypo <- hypo %>%
       dplyr::mutate(BGunder3 = dplyr::case_when(
-        BGunder3 == 0 & lag(BGunder3) == 1 & lead(BGunder3) == 2 ~ 1,
+        BGunder3 == 0 & dplyr::lag(BGunder3) == 1 & dplyr::lead(BGunder3) == 2 ~ 1,
         TRUE ~ BGunder3
       )) %>%
       mutate(BGunder3 = dplyr::case_when(
-        BGunder3 == 2 & lag(BGunder3) == 1 & lead(BGunder3) == 0 ~ 1,
+        BGunder3 == 2 & dplyr::lag(BGunder3) == 1 & dplyr::lead(BGunder3) == 0 ~ 1,
         TRUE ~ BGunder3
       ))
 
@@ -910,6 +969,7 @@ analyseCGM <- function(exercise = F,
     cgmupload["lbgi", f] <- base::round(base::mean(stats::na.omit(rl)), digits = 2)
     cgmupload["hbgi", f] <- base::round(base::mean(stats::na.omit(rh)), digits = 2)
 
+  }
   }
 
   # Write file.
