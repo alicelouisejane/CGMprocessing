@@ -61,7 +61,7 @@ cleanCGM <- function(inputdirectory,
                      expectedwear = "full",
                      impute = F,
                      saveplot = F) {
-
+library(dplyr)
   # output directory is created and lists initialised
   base::dir.create(outputdirectory, showWarnings = FALSE)
   gaptestoutput <- list()
