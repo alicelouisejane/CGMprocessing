@@ -217,16 +217,19 @@ analyseCGM <- function(exercise = F,
 
     for(f in seq_along(table_list)){
       table<- table_list[[f]]
+      if (exercise == F) {
       table$timeofday<-time_of_day_list[f]
+      }
+
       # specific TIR for exercise from lancet guidelines, input file must be set up specifically
       if (exercise == T) {
-        f<-f
+        f<-file
         cgmupload["subject_id", f] <- Id
         # files not set up correctly
         if (is.null(hourspostexercise) | !("diff_disc" %in% names(table))) {
           stop("Input files not set up correctly for this step- refer to README. Ensure you also use hourspostexercise argument to specify time of interest post-exercise.")
         }
-        hours_post_exercise==hourspostexercise
+        hours_post_exercise=hourspostexercise
         table$date<-as.Date(table$timestamp)
         cgmupload["exercise", f]<-"TRUE"
         cgmupload["hourspostexercise", f]<-hours_post_exercise
