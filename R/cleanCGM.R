@@ -440,9 +440,9 @@ library(dplyr)
         cowplot::draw_label(paste("Patient ID:", Id), x = 0.5, y = 0.95, hjust = 0.5, fontface = "bold", size = 14)
 
       if (saveplot == T) {
-        base::dir.create(file.path(outputdirectory, "graphs"), showWarnings = FALSE)
+
         # save the plot, all patients
-        ggplot2::ggsave(paste0(outputdirectory, "/graphs/", Id, "summaryCGM.pdf"), graphoutput_title, width = 6, height = 6)
+        ggplot2::ggsave(paste0("graphs/", Id, "summaryCGM.pdf"), graphoutput_title, width = 6, height = 6)
       }
     } else if (combined == T) {
       data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
