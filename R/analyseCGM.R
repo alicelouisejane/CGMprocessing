@@ -81,8 +81,6 @@ analyseCGM <- function(exercise = F,
                        format = "rows",
                        printname = T) {
 
-  base::dir.create(outputdirectory, showWarnings = FALSE)
-
   if(combined==F){
   # define lists
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
@@ -983,6 +981,7 @@ analyseCGM <- function(exercise = F,
     cgmupload <- base::as.data.frame(base::t(cgmupload))
     cgmupload <- cgmupload[-1, ]
   }
+  base::dir.create(outputdirectory, showWarnings = FALSE)
   filename <- base::paste0(outputdirectory, outputname, ".csv")
   rio::export(cgmupload, file = filename, row.names = FALSE)
 
