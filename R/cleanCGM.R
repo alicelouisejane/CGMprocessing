@@ -583,7 +583,7 @@ cleanCGM <- function(inputdirectory,
     # output
     table$date <- as.Date(table$timestamp)
     table <- dplyr::select(table, c(id, date, timestamp, sensorglucose))
-    rio::export(table, file = file.path(base::paste0(outputdirectory, "data-clean/", Id, "_cleaned.csv")))
+    rio::export(table, file = base::paste0(outputdirectory, "data-clean/", Id, "_cleaned.csv"))
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
