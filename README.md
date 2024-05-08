@@ -40,9 +40,11 @@ will find this in the man file on this GitHub:
 
 -   **/data-raw**: raw data from sensor
 
-Automatically created: - **/data-clean**: data ran through cleanCGM()
-function or own cleaning pipeline to be inline with the format of a
-cleanCGM() output
+Automatically created:
+
+-   **/data-clean**: data ran through cleanCGM() function or own
+    cleaning pipeline to be inline with the format of a cleanCGM()
+    output
 
 -   **/additional**: Folder for output csv of gap information and
     percentage expected wear information over the study output from
