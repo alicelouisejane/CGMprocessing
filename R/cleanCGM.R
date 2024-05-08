@@ -437,7 +437,7 @@ cleanCGM <- function(inputdirectory,
         dplyr::mutate(time = hms::as_hms(timestamp)) %>%
         ggplot2::ggplot(ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
         ggplot2::geom_path(ggplot2::aes(group = as.factor(date), colour = as.factor(date)), colour = "grey") +
-        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over:", as.numeric(round(difftime(max(table$timestamp), min(table$timestamp), "days"))), "days", "\n Raw data collected:", round(mean(percentageexpectedwear$percentage_datacollected_overstudy, na.rm = T)), "%")) +
+        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over:",length(unique(table$date)),"days; expected:", as.numeric(round(difftime(max(table$timestamp), min(table$timestamp), "days"))), "days", "\n Raw data collected over expected study time:", round(mean(percentageexpectedwear$percentage_datacollected_overstudy, na.rm = T)), "%")) +
         ggplot2::theme_minimal() +
         ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
         # median hi low and IQR could be the same as each other...
@@ -493,7 +493,7 @@ cleanCGM <- function(inputdirectory,
         dplyr::mutate(time = hms::as_hms(timestamp)) %>%
         ggplot2::ggplot(ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
         ggplot2::geom_path(ggplot2::aes(group = interaction(as.factor(date), id), colour = as.factor(date)), colour = "grey") +
-        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over study, N=",length(unique(table$id)), "\n Mean Raw data collected:", round(mean(data_collected_output_final$percentage_datacollected_overstudy, na.rm = T)), "%")) +
+        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over study, N=",length(unique(table$id)), "\n Mean raw data collected over expected study time:", round(mean(data_collected_output_final$percentage_datacollected_overstudy, na.rm = T)), "%")) +
         ggplot2::theme_minimal() +
         ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
         # median hi low and IQR could be the same as each other...
@@ -539,7 +539,7 @@ cleanCGM <- function(inputdirectory,
 
         graph_list[[i]] <- ggplot2::ggplot(data = data, ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
           ggplot2::geom_path(ggplot2::aes(group = interaction(as.factor(date), id), colour = as.factor(date)), colour = "grey") +
-          ggplot2::labs(x = "Time", y = "Glucose", title = paste("Patient ID:", i, "\n Summary of CGM wear over:", as.numeric(round(difftime(max(data$timestamp), min(data$timestamp), "days"))), "days", "\n Raw data collected:", round(data_collected_output_final$percentage_datacollected_overstudy[data_collected_output_final$id == i]), "%")) +
+          ggplot2::labs(x = "Time", y = "Glucose", title = paste("Patient ID:", i, "\n Summary of CGM wear over:",length(unique(data$date)),"days; expected:", as.numeric(round(difftime(max(data$timestamp), min(data$timestamp), "days"))), "days", "\n Raw data collected over expected study time:", round(data_collected_output_final$percentage_datacollected_overstudy[data_collected_output_final$id == i]), "%")) +
           ggplot2::theme_minimal() +
           ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
           # median hi low and IQR could be the same as each other...
