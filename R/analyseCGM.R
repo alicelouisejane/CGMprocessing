@@ -982,7 +982,7 @@ analyseCGM <- function(exercise = F,
     cgmupload <- cgmupload[-1, ]
   }
   base::dir.create(outputdirectory, showWarnings = FALSE)
-  filename <- base::paste0(outputdirectory, outputname, ".csv")
+  filename <- base::paste0(outputdirectory, "/",outputname, ".csv")
   rio::export(cgmupload, file = filename, row.names = FALSE)
 
   closeAllConnections()
