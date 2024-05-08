@@ -68,7 +68,7 @@ cleanCGM <- function(inputdirectory,
                      saveplot = F) {
 
     # output directory is created and lists initialised
-  base::dir.create(file.path(paste0(outputdirectory,"data-clean/")), showWarnings = T)
+  base::dir.create(file.path(paste0(outputdirectory,"data-clean/")), showWarnings = FALSE)
   base::dir.create(file.path(paste0(outputdirectory,"additional/")), showWarnings = FALSE)
 
   if( saveplot==T){
@@ -238,7 +238,7 @@ cleanCGM <- function(inputdirectory,
 
         table_cal <- dplyr::filter(table, !grepl("calib", table$recordtype, ignore.case = T)) %>%
           data.table::as.data.table() %>%
-          mutate(date = as.Date(timestamp))
+          dplyr::mutate(date = as.Date(timestamp))
 
         # Set keys for data.tables
         data.table::setkey(calibration, id, timestampfp)
@@ -248,15 +248,15 @@ cleanCGM <- function(inputdirectory,
         calibration_merged <- table_cal[calibration, roll = "nearest"] %>%
           dplyr::mutate(diff = as.numeric(abs(timestamp - timestampfp_copy))) %>%
           dplyr::mutate(nocalibration = ifelse(diff > 900, 1, NA)) %>% # if the matching glucose is > 15 mins then ensure to mark
-          filter(is.na(nocalibration)) %>% # remove these
+          dplyr::filter(is.na(nocalibration)) %>% # remove these
           dplyr::ungroup() %>%
           dplyr::mutate(date = as.Date(timestamp)) %>%
-          group_by(id, date) %>%
+          dplyr::group_by(id, date) %>%
           dplyr::mutate(MD = mean(abs((fingerprickglucose - sensorglucose) / fingerprickglucose) * 100)) %>%
           dplyr::mutate(remove = ifelse(floor(MD) > 20, 1, NA)) %>%
           dplyr::mutate(calibrationperformed = 1) %>%
-          select(id, remove, date, MD, calibrationperformed) %>%
-          group_by(id, date) %>%
+          dplyr::select(id, remove, date, MD, calibrationperformed) %>%
+          dplyr::group_by(id, date) %>%
           dplyr::mutate(num_calibrations_perday = sum(calibrationperformed, na.rm = T)) %>%
           unique()
 
@@ -478,7 +478,7 @@ cleanCGM <- function(inputdirectory,
       if (saveplot == T) {
 
         # save the plot, all patients
-        ggplot2::ggsave(paste0("graphs/", Id, "summaryCGM.pdf"), graphoutput_title, width = 6, height = 6)
+        ggplot2::ggsave(paste0(outputdirectory,"graphs/", Id, "_summaryCGM.pdf"), graphoutput_title, width = 6, height = 6)
       }
     } else if (combined == T) {
       data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
@@ -570,20 +570,20 @@ cleanCGM <- function(inputdirectory,
           ggplot2::scale_y_continuous(limits = c(2, (sensormax)), breaks = c(seq(2, sensormax, 2)))
 
         if (saveplot == T) {
-          ggplot2::ggsave(paste0(outputdirectory,"/graphs/", i, "summaryCGM.pdf"), graph_list[[i]], width = 6, height = 6)
+          ggplot2::ggsave(paste0(outputdirectory,"graphs/", i, "_summaryCGM.pdf"), graph_list[[i]], width = 6, height = 6)
         }
       }
 
       if (saveplot == T) {
         # save the plot, all patients
-        ggplot2::ggsave(paste0(outputdirectory,"/graphs/summaryCGM_allstudy.pdf"), graph1, width = 6, height = 6)
+        ggplot2::ggsave(paste0(outputdirectory,"graphs/summaryCGM_allstudy.pdf"), graph1, width = 6, height = 6)
       }
     }
 
     # output
     table$date <- as.Date(table$timestamp)
     table <- dplyr::select(table, c(id, date, timestamp, sensorglucose))
-    rio::export(table, file = base::paste0(outputdirectory, "data-clean/", Id, "_cleaned.csv"))
+    rio::export(table, file = base::paste0(outputdirectory,"data-clean/", Id, "_cleaned.csv"))
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
