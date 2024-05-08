@@ -434,7 +434,7 @@ library(dplyr)
         cowplot::draw_label(paste("Patient ID:", Id), x = 0.5, y = 0.95, hjust = 0.5, fontface = "bold", size = 14)
 
       if (saveplot == T) {
-        base::dir.create(paste0(outputdirectory, "/graphs/"), showWarnings = FALSE)
+        base::dir.create(file.path(outputdirectory, "graphs"), showWarnings = FALSE)
         # save the plot, all patients
         ggplot2::ggsave(paste0(outputdirectory, "/graphs/", Id, "summaryCGM.pdf"), graphoutput_title, width = 6, height = 6)
       }
@@ -528,13 +528,13 @@ library(dplyr)
           ggplot2::scale_y_continuous(limits = c(2, (sensormax)), breaks = c(seq(2, sensormax, 2)))
 
         if (saveplot == T) {
-          base::dir.create(paste0(outputdirectory, "/graphs/"), showWarnings = FALSE)
+          base::dir.create(file.path(outputdirectory, "graphs"), showWarnings = FALSE)
           ggplot2::ggsave(paste0(outputdirectory, "/graphs/", i, "summaryCGM.pdf"), graph_list[[i]], width = 6, height = 6)
         }
       }
 
       if (saveplot == T) {
-        base::dir.create(paste0(outputdirectory, "/graphs/"), showWarnings = FALSE)
+        base::dir.create(file.path(outputdirectory, "graphs"), showWarnings = FALSE)
         # save the plot, all patients
         ggplot2::ggsave(paste0(outputdirectory, "/graphs/summaryCGM_allstudy.pdf"), graph1, width = 6, height = 6)
       }
@@ -548,8 +548,11 @@ library(dplyr)
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
-  rio::export(gaptestfinaloutput, file=paste0(outputdirectory,"/","gap_info.csv"))
+
+  base::dir.create(file.path(outputdirectory, "additional"), showWarnings = FALSE)
+
+  rio::export(gaptestfinaloutput, file=paste0(outputdirectory,"/additional/gap_info.csv"))
 
   data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
-  rio::export(data_collected_output_final, file=paste0(outputdirectory,"/","percentage_data_collected_info.csv"))
+  rio::export(data_collected_output_final, file=paste0(outputdirectory,"/additional/percentage_data_collected_info.csv"))
 }
