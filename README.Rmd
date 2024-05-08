@@ -66,6 +66,7 @@ ___
 - Additional variables are required for cleaning steps but are not included in the final output of the clean file: **eventype**. This variable is the  identification of if value was a sensor glucose value, a scan glucose value (libre 1 only) or other event. Cleaning filters for only sensor glucose values.   
 
 **Table**: Definitions of the standardized variables
+
 | Variable      | Definition                                                                                                                                      |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | id            | Subject ID taken from file name combined with the device ID for identification if different devices are occuring in one file (separated by "_") |

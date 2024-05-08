@@ -120,12 +120,40 @@ be output as the ID in the cleaned file.**
     value, a scan glucose value (libre 1 only) or other event. Cleaning
     filters for only sensor glucose values.
 
-**Table**: Definitions of the standardized variables | Variable |
-Definition | | ————- | ———————————————————————————————————————————————–
-| | id | Subject ID taken from file name combined with the device ID for
+**Table**: Definitions of the standardized variables
+
+<table>
+<colgroup>
+<col style="width: 8%" />
+<col style="width: 91%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Variable</th>
+<th>Definition</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>id</td>
+<td>Subject ID taken from file name combined with the device ID for
 identification if different devices are occuring in one file (separated
-by “\_“) | | date | Date from timestamp | | timestamp | Sensor timestamp
-of glucose reading | | sensorglucose | Sensor glucose value |
+by “_“)</td>
+</tr>
+<tr class="even">
+<td>date</td>
+<td>Date from timestamp</td>
+</tr>
+<tr class="odd">
+<td>timestamp</td>
+<td>Sensor timestamp of glucose reading</td>
+</tr>
+<tr class="even">
+<td>sensorglucose</td>
+<td>Sensor glucose value</td>
+</tr>
+</tbody>
+</table>
 
 \###CGM variable dictionary
 
