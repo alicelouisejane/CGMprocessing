@@ -67,11 +67,11 @@ cleanCGM <- function(inputdirectory,
                      saveplot = F) {
 library(dplyr)
   # output directory is created and lists initialised
-  base::dir.create(outputdirectory, showWarnings = FALSE)
-  base::dir.create("additional", showWarnings = FALSE)
+  base::dir.create(file.path(paste0(outputdirectory,"/data-clean")), showWarnings = FALSE)
+  base::dir.create(file.path(paste(outputdirectory,"/additonal")), showWarnings = FALSE)
 
   if( saveplot==T){
-  base::dir.create("graphs", showWarnings = FALSE)
+    base::dir.create(file.path(paste(outputdirectory,"/graphs")), showWarnings = FALSE)
   }
 
   gaptestoutput <- list()
@@ -534,27 +534,27 @@ library(dplyr)
           ggplot2::scale_y_continuous(limits = c(2, (sensormax)), breaks = c(seq(2, sensormax, 2)))
 
         if (saveplot == T) {
-          ggplot2::ggsave(paste0("graphs/", i, "summaryCGM.pdf"), graph_list[[i]], width = 6, height = 6)
+          ggplot2::ggsave(paste0(outputdirectory,"/graphs/", i, "summaryCGM.pdf"), graph_list[[i]], width = 6, height = 6)
         }
       }
 
       if (saveplot == T) {
         # save the plot, all patients
-        ggplot2::ggsave(paste0("graphs/summaryCGM_allstudy.pdf"), graph1, width = 6, height = 6)
+        ggplot2::ggsave(paste0(outputdirectory,"/graphs/summaryCGM_allstudy.pdf"), graph1, width = 6, height = 6)
       }
     }
 
     # output
     table$date <- as.Date(table$timestamp)
-    filename <- base::paste0(outputdirectory, "/", Id, "_cleaned.csv")
+    filename <- base::paste0(outputdirectory, "/data-clean/", Id, "_cleaned.csv")
     table <- dplyr::select(table, c(id, date, timestamp, sensorglucose))
     rio::export(table, file = paste0(filename))
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
 
-  rio::export(gaptestfinaloutput, file=paste0("additional/gap_info.csv"))
+  rio::export(gaptestfinaloutput, file=paste0(outputdirectory,"/additional/gap_info.csv"))
 
   data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
-  rio::export(data_collected_output_final, file=paste0("additional/percentage_data_collected_info.csv"))
+  rio::export(data_collected_output_final, file=paste0(outputdirectory,"/additional/percentage_data_collected_info.csv"))
 }
