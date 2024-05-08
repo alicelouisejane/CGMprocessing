@@ -19,7 +19,7 @@ This code was developed based off work by [T.
 Vigers](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0216851)
 
 This README is written as a tutorial for CGM analysis, including in the
-context of exercise. This an an update and more in depth explanation of
+context of exercise. This an updated and more in depth explanation of
 the general pipeline that was developed and used in publishing a [PhD
 Thesis](https://www.proquest.com/openview/78089a4b4d1696754e7d2ae2b3e2e922/1?pq-origsite=gscholar&cbl=51922&diss=y)
 and [peer reviewed
