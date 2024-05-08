@@ -68,11 +68,11 @@ cleanCGM <- function(inputdirectory,
                      saveplot = F) {
 
     # output directory is created and lists initialised
-  base::dir.create(file.path(paste0(outputdirectory,"/data-clean/")), showWarnings = T)
-  base::dir.create(file.path(paste0(outputdirectory,"/additonal/")), showWarnings = FALSE)
+  base::dir.create(file.path(paste0(outputdirectory,"data-clean/")), showWarnings = T)
+  base::dir.create(file.path(paste0(outputdirectory,"additional/")), showWarnings = FALSE)
 
   if( saveplot==T){
-    base::dir.create(file.path(paste0(outputdirectory,"/graphs/")), showWarnings = FALSE)
+    base::dir.create(file.path(paste0(outputdirectory,"graphs/")), showWarnings = FALSE)
   }
 
   gaptestoutput <- list()
@@ -583,13 +583,13 @@ cleanCGM <- function(inputdirectory,
     # output
     table$date <- as.Date(table$timestamp)
     table <- dplyr::select(table, c(id, date, timestamp, sensorglucose))
-    rio::export(table, file = base::paste0(outputdirectory, "/data-clean/", Id, "_cleaned.csv"))
+    rio::export(table, file = file.path(base::paste0(outputdirectory, "data-clean/", Id, "_cleaned.csv")))
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
 
-  rio::export(gaptestfinaloutput, file=paste0(outputdirectory,"/additional/gap_info.csv"))
+  rio::export(gaptestfinaloutput, file=paste0(outputdirectory,"additional/gap_info.csv"))
 
   data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
-  rio::export(data_collected_output_final, file=paste0(outputdirectory,"/additional/percentage_data_collected_info.csv"))
+  rio::export(data_collected_output_final, file=paste0(outputdirectory,"additional/percentage_data_collected_info.csv"))
 }
