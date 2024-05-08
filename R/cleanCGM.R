@@ -11,6 +11,9 @@
 #'
 #' @param outputdirectory path to folder where cleaned output files will be stored
 #'
+#' @param cgmdictionaryfile Optional. A string indicating the full path to a custom 'cgmvariable_dictionary.xlsx' file. See README on how to construct.
+#' If NULL, the default file included with the package is used.
+#'
 #' @param device Use "other" if CGM required calibrations. Options are can be any dexcom (g4,g6etc), libre (1,2,pro), or "other." Important to specify what device is being used for the alignment of standardized variable names and to ensure sensor limits, ensure device type is also in the cgm dictionary next to variables.
 #'  "Other" is specified if dealing with data that requires calibration or is in an alternative layout. Gap testing and standard percentage wear and droupout measures will not be created with this but number of days worn will be reported. Edit code as necessary if sensor is other and calibration is false
 #'
@@ -53,6 +56,7 @@
 
 cleanCGM <- function(inputdirectory,
                      outputdirectory,
+                     cgmdictionaryfile=NULL,
                      device = "other",
                      combined = F,
                      calibration = F,
@@ -70,18 +74,20 @@ library(dplyr)
   if (device != "other" & combined == T) {
     stop(print("Only use combined=TRUE with device=other. Separate raw download files are expected for use with device options dexcom or libre. See README for help"))
   } else if (combined == F) {
-    # cgm variable dictionary in documentation data file. Edit source file as necessary if using other CGM
-    file_path <- here::here("inst/extdata", "cgmvariable_dictionary.xlsx")
 
-    cgm_dict <- rio::import(file_path,guess_max = 10000000)
+    if (is.null(cgmdictionaryfile)) {
+      cgmdictionaryfile <- system.file("extdata", "cgmvariable_dictionary.xlsx", package = "CGMprocessing")
+    }
+    cgm_dict <- rio::import(cgmdictionaryfile, guess_max = 10000000)
 
     # Read in data: anticipated structure is a single file containing raw CGM downloads per individual
     files <- base::list.files(path = inputdirectory, full.names = TRUE)
 
   } else if (device == "other" & combined == T) {
-    file_path <- here::here("inst/extdata", "cgmvariable_dictionary.xlsx")
-
-    cgm_dict <- rio::import(file_path)
+    if (is.null(cgmdictionaryfile)) {
+      cgmdictionaryfile <- system.file("extdata", "cgmvariable_dictionary.xlsx", package = "CGMprocessing")
+    }
+    cgm_dict <- rio::import(cgmdictionaryfile, guess_max = 10000000)
 
     # Read in data: anticipated structure here is a preproccessed dataframe of combined CGM from a study
     files <- inputdirectory
@@ -193,8 +199,8 @@ library(dplyr)
       sensormax <- 24
     } else if (grepl("libre", device)) {
       # DO NOT INCLUDE ANY OTHER RECODS OTHER THAN CGM ie. NOT scanglucose
-      table <- dplyr::filter(table, scan_yn == 0)
-      table <- dplyr::select(table, -c(scan_yn, scanglucose))
+      table <- dplyr::filter(table, eventtype == 0)
+      table <- dplyr::select(table, -c(eventtype))
       table$sensorglucose <- as.character(table$sensorglucose)
       base::suppressWarnings(
         table <- table %>% dplyr::mutate(sensorglucose = dplyr::case_when(

@@ -56,13 +56,13 @@ will find this in the man file on this GitHub:
 data and can work with pre-aggregated clinical study CGM data. Raw CGM
 files usually have an ID number within the filename. If this is the case
 leave the filename as is. If raw files don’t have this then edit the
-filenames so they are uniquely identified with the patients ID number.
+filenames so they are uniquely identified with the a subject ID number.
 If you are using already pre-aggregated data from another study ie.
 [JAEB](https://public.jaeb.org/datasets/diabetes) you will need to
-ensure that your identification variable is a combination of the
-participant id, visit number and device number to ensure everything is
-uniquely identified. If you are working with pre-processed data, or
-other CGM device types ensure you check data structures and edit code as
+ensure that your identification variable is a combination of the subject
+ID, visit number and device number to ensure everything is uniquely
+identified. If you are working with pre-processed data, or other CGM
+device types ensure you check data structures and edit code as
 appropriate to fit your needs❗
 
 ------------------------------------------------------------------------
@@ -93,60 +93,38 @@ section:** [Jump to cleanCGM output](#cleancgm-output)❗
 ❗ **Important:Raw files should have patient ID within name
 *ID\_optional.ext* **❗
 
--   *cgmvariable\_dictionary.xlsx* included as part of this package is
-    an editable dictionary used to rename variables of interest (example
-    shown in table). This can be updated for variable names of other
-    sensors. The output of the cleanCGM will give the final variable
-    names should be **id**, **timestamp**, **sensorglucose**,
-    **devicetype**,(optional **recordtype** which is only required for
-    calibration) defined as below. This part of the code works to
-    standardize variables without much user input. Alternatively you can
-    manually change your files to follow this variable standardization.
-
-**NOTE: if using pre-aggrgated CGM data then your id column needs to
+**NOTE: if using pre-aggrgated CGM data then your ID column needs to
 already be formatted as participant id, visit number and device type. If
 using raw data then devicetype will be combined with participant id from
 file name and to create the overall id variable in cleanCGM. This will
-be output as the id in the cleaned file.**
+be output as the ID in the cleaned file.**
 
-**Table**: Definitions of the standardized variables
+-   The output of the cleanCGM will give the final variable names as:
+    **id**,**date** ,**timestamp**, **sensorglucose**
 
-<table>
-<colgroup>
-<col style="width: 11%" />
-<col style="width: 88%" />
-</colgroup>
-<thead>
-<tr class="header">
-<th>Variable</th>
-<th>Definition</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>id</td>
-<td>Patient ID or sensor ID</td>
-</tr>
-<tr class="even">
-<td>timestamp</td>
-<td>Sensor glucose timestamp</td>
-</tr>
-<tr class="odd">
-<td>sensorglucose</td>
-<td>Sensor glucose value</td>
-</tr>
-<tr class="even">
-<td>recordtype</td>
-<td>To identify if value is calibration or sensor (optional required for
-calibration)</td>
-</tr>
-<tr class="odd">
-<td>deviceid</td>
-<td>To identify if more than one sensor was used. Used mainly in
-cleanCGM for understanding sensor drop out</td>
-</tr>
-</tbody>
-</table>
+-   Additional variables are required for cleaning steps but are not
+    included in the final output of the clean file: **eventype**. This
+    variable is the identification of if value was a sensor glucose
+    value, a scan glucose value (libre 1 only) or other event. Cleaning
+    filters for only sensor glucose values.
+
+**Table**: Definitions of the standardized variables | Variable |
+Definition | | ————- | ———————————————————————————————————————————————–
+| | id | Subject ID taken from file name combined with the device ID for
+identification if different devices are occuring in one file (separated
+by “\_“) | | date | Date from timestamp | | timestamp | Sensor timestamp
+of glucose reading | | sensorglucose | Sensor glucose value |
+
+\###CGM variable dictionary
+
+*cgmvariable\_dictionary.xlsx* included as part of this package is a
+dictionary used to rename variables of interest with standardization.
+names (as above) without much user input. Alternatively you can manually
+change your files to follow this variable standardization.
+
+-   Optional argument in *cleanCGM* allows for custom CGM dictionaries
+    to be used if the names of the raw data CGM files are different to
+    what is pre-specified or you are using other sensors.
 
 **Table**: Example of dictionary for renaming old variables in raw CGM
 data files, edit as required. “Type” column in this dictionary is only
@@ -159,17 +137,17 @@ separating into folders by sensor type to avoid confusion before
 processing. Additionally please note the use of ID\_VISIT\_DEVICEID in
 the type other. This is used to ensure unique identification in clinical
 study data that has been pre-aggregated. Device id is also kept for use
-in Raw files, however if you purposefully have more than one device (ie
+in raw files, however if you purposefully have more than one device (ie
 a 30 day wear file) then this will not effect outputs of analyseCGM but
 you must specify this. However, the
 **percentage\_data\_collected\_info.xlsx** will be per unique device.
 
 <table>
 <colgroup>
-<col style="width: 44%" />
-<col style="width: 18%" />
-<col style="width: 11%" />
-<col style="width: 25%" />
+<col style="width: 45%" />
+<col style="width: 19%" />
+<col style="width: 8%" />
+<col style="width: 26%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -200,32 +178,32 @@ you must specify this. However, the
 </tr>
 <tr class="even">
 <td>Record Type</td>
-<td>scan_yn</td>
+<td>eventtype</td>
 <td>libre</td>
 <td>14</td>
 </tr>
 <tr class="odd">
-<td>Scan Glucose(mmol/L)</td>
-<td>scanglucose</td>
-<td>libre</td>
-<td>14</td>
+<td>Source Device ID</td>
+<td>deviceid</td>
+<td>dexcom</td>
+<td>10</td>
 </tr>
 <tr class="even">
 <td>Timestamp (YYYY-MM-DDThh:mm:ss)</td>
 <td>timestamp</td>
-<td>dexcomg6</td>
+<td>dexcom</td>
 <td>10</td>
 </tr>
 <tr class="odd">
 <td>Glucose Value (mmol/L)</td>
 <td>sensorglucose</td>
-<td>dexcomg6</td>
+<td>dexcom</td>
 <td>10</td>
 </tr>
 <tr class="even">
-<td>Source Device ID</td>
-<td>deviceid</td>
-<td>dexcomg6</td>
+<td>Event Type</td>
+<td>eventtype</td>
+<td>dexcom</td>
 <td>10</td>
 </tr>
 <tr class="odd">
@@ -245,12 +223,6 @@ you must specify this. However, the
 <td>sensorglucose</td>
 <td>other</td>
 <td>14</td>
-</tr>
-<tr class="even">
-<td>record_type</td>
-<td>recordtype</td>
-<td>other</td>
-<td>10</td>
 </tr>
 </tbody>
 </table>
@@ -299,14 +271,14 @@ structures and edit your code as necessary. 👷
 
 **Table**: Example head of data structures that have calibration values.
 All CGM and SMBG calibrations are put into the same column and
-identified by a recordtype variable.
+identified by a eventtype variable.
 
 <table>
 <thead>
 <tr class="header">
 <th>id</th>
 <th>timestamp</th>
-<th>recordtype</th>
+<th>eventtype</th>
 <th>sensorglucose</th>
 </tr>
 </thead>
@@ -736,17 +708,19 @@ Also output are:
 **Functionality:** **analyseCGM()** is a function written to create
 consensus glycemic metrics based off definitions outlined International
 Consensus on Use of Continuous Glucose Monitoring:[Danne
-2017](https://care.diabetesjournals.org/content/40/12/1631). For
-definitions [Jump to analyseCGM output](#analysecgm-output). Function
-takes files in the same structure as outputted from cleanCGM() or
-exercise\_split().
+2017](https://care.diabetesjournals.org/content/40/12/1631) [Battelino
+2023](https://pubmed.ncbi.nlm.nih.gov/36493795/). For definitions [Jump
+to analyseCGM output](#analysecgm-output). Function takes files in the
+same structure as outputted from cleanCGM() or exercise\_split().
 
 ------------------------------------------------------------------------
 
 -   For calculation of time spent variables data is checked to be
     consecutive. If timestamps are &gt;20 min apart a missing row is
     added to the table to prevent events from running on if the time gap
-    is &gt;20 min.
+    is &gt;20 min. Gaps in the data are identified by cleanCGM (if used)
+    and a summary file is outputted- [Jump to cleanCGM
+    output](#cleancgm-output).
 
 -   General time spent variables are created for:
 
@@ -772,7 +746,7 @@ variables* are sufficient and the defined excursions or “clinical
 excursion” hypoglcemia are too stringent. You may miss important
 information if you just assess events that had to last &gt;15min. This
 is particularly relevant if you use the Libre 1, 2 or Libre pro as this
-CGM measures glucose every 15min. Using time above/below as your
+CGM measures glucose every 15min. Using general time above/below as your
 measures of hypo/hyperglycemia would give you a good indication of the
 lived experience of a patient and this, in my opinion, is most
 important. Excursion metrics are still required by the International
@@ -805,14 +779,14 @@ had a gap &gt;20 min) the hypoglycemic event has to end at this point).
 
 #### Freestyle libre in the analyseCGM() function
 
--   If the data you have are from a Libre (or any sensor that has 15min
-    sampled data) then ensure your argument libre set to TRUE in the
-    analyseCGM() function
+-   If the data you have are from a Libre below generation 3 (or any
+    sensor that has 15min sampled data) then ensure your argument
+    *libre* is set to TRUE in the analyseCGM() function.
 
 -   The analyseCGM() function has a section that pseudo codes this kind
     of data to be “5min” data ie. Every row is repeated 2 more times (3
     lots of 5 mins are in 15 mins). It doesn’t matter that the
-    timestamps aren’t increasing in 5min but having the number of row
+    timestamps aren’t increasing by 5 min but having the number of rows
     corresponding to 5 min data is the important part, mainly for the
     clinical hypo excursion definition. Gaps in the data will still be
     identified as normal, as the repeated rows are only for the rows
@@ -821,6 +795,9 @@ had a gap &gt;20 min) the hypoglycemic event has to end at this point).
 <!-- -->
 
       table <- slice(table, rep(1:n(), each = 3))
+
+-   Additionally this ensures the true interval is tracked and inputted
+    correctly in the output file
 
 #### <a id="analysecgm-output"></a> analyseCGM output
 

@@ -7,6 +7,7 @@
 cleanCGM(
   inputdirectory,
   outputdirectory,
+  cgmdictionaryfile = NULL,
   device = "other",
   combined = F,
   calibration = F,
@@ -21,6 +22,9 @@ cleanCGM(
 \item{inputdirectory}{path to folder containing raw files. If data is pre-aggregated then use the full file path including file name of this file. Preferred csv format but can read in others.}
 
 \item{outputdirectory}{path to folder where cleaned output files will be stored}
+
+\item{cgmdictionaryfile}{Optional. A string indicating the full path to a custom 'cgmvariable_dictionary.xlsx' file. See README on how to construct.
+If NULL, the default file included with the package is used.}
 
 \item{device}{Use "other" if CGM required calibrations. Options are can be any dexcom (g4,g6etc), libre (1,2,pro), or "other." Important to specify what device is being used for the alignment of standardized variable names and to ensure sensor limits, ensure device type is also in the cgm dictionary next to variables.
 "Other" is specified if dealing with data that requires calibration or is in an alternative layout. Gap testing and standard percentage wear and droupout measures will not be created with this but number of days worn will be reported. Edit code as necessary if sensor is other and calibration is false}
