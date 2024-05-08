@@ -68,7 +68,7 @@ cleanCGM <- function(inputdirectory,
                      saveplot = F) {
 
     # output directory is created and lists initialised
-  base::dir.create(file.path(paste0(outputdirectory,"/data-clean/")), showWarnings = FALSE)
+  base::dir.create(file.path(paste0(outputdirectory,"/data-clean/")), showWarnings = T)
   base::dir.create(file.path(paste0(outputdirectory,"/additonal/")), showWarnings = FALSE)
 
   if( saveplot==T){
@@ -582,9 +582,8 @@ cleanCGM <- function(inputdirectory,
 
     # output
     table$date <- as.Date(table$timestamp)
-    filename <- base::paste0(outputdirectory, "/data-clean/", Id, "_cleaned.csv")
     table <- dplyr::select(table, c(id, date, timestamp, sensorglucose))
-    rio::export(table, file = paste0(filename))
+    rio::export(table, file = base::paste0(outputdirectory, "/data-clean/", Id, "_cleaned.csv"))
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
