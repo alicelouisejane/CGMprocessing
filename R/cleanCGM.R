@@ -68,6 +68,12 @@ cleanCGM <- function(inputdirectory,
 library(dplyr)
   # output directory is created and lists initialised
   base::dir.create(outputdirectory, showWarnings = FALSE)
+  base::dir.create("additional", showWarnings = FALSE)
+
+  if( saveplot==T){
+  base::dir.create("graphs", showWarnings = FALSE)
+  }
+
   gaptestoutput <- list()
   data_collected_output <- list()
 
@@ -528,15 +534,13 @@ library(dplyr)
           ggplot2::scale_y_continuous(limits = c(2, (sensormax)), breaks = c(seq(2, sensormax, 2)))
 
         if (saveplot == T) {
-          base::dir.create(file.path(outputdirectory, "graphs"), showWarnings = FALSE)
-          ggplot2::ggsave(paste0(outputdirectory, "/graphs/", i, "summaryCGM.pdf"), graph_list[[i]], width = 6, height = 6)
+          ggplot2::ggsave(paste0("graphs/", i, "summaryCGM.pdf"), graph_list[[i]], width = 6, height = 6)
         }
       }
 
       if (saveplot == T) {
-        base::dir.create(file.path(outputdirectory, "graphs"), showWarnings = FALSE)
         # save the plot, all patients
-        ggplot2::ggsave(paste0(outputdirectory, "/graphs/summaryCGM_allstudy.pdf"), graph1, width = 6, height = 6)
+        ggplot2::ggsave(paste0("graphs/summaryCGM_allstudy.pdf"), graph1, width = 6, height = 6)
       }
     }
 
@@ -549,10 +553,8 @@ library(dplyr)
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
 
-  base::dir.create(file.path(outputdirectory, "additional"), showWarnings = FALSE)
-
-  rio::export(gaptestfinaloutput, file=paste0(outputdirectory,"/additional/gap_info.csv"))
+  rio::export(gaptestfinaloutput, file=paste0("additional/gap_info.csv"))
 
   data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
-  rio::export(data_collected_output_final, file=paste0(outputdirectory,"/additional/percentage_data_collected_info.csv"))
+  rio::export(data_collected_output_final, file=paste0("additional/percentage_data_collected_info.csv"))
 }
