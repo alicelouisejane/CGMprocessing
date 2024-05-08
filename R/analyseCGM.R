@@ -82,6 +82,7 @@ analyseCGM <- function(exercise = F,
                        printname = T) {
 
   base::dir.create(outputdirectory, showWarnings = FALSE)
+
   if(combined==F){
   # define lists
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
