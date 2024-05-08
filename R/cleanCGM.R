@@ -548,8 +548,8 @@ library(dplyr)
   }
 
   gaptestfinaloutput <- dplyr::bind_rows(gaptestoutput[!sapply(gaptestoutput, is.null)])
-  rio::export(gaptestfinaloutput, paste0(outputdirectory,"/gap_info.csv"))
+  rio::export(gaptestfinaloutput, file=paste0(outputdirectory,"/","gap_info.csv"))
 
   data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
-  rio::export(data_collected_output_final, paste0(outputdirectory,"/percentage_data_collected_info.csv"))
+  rio::export(data_collected_output_final, file=paste0(outputdirectory,"/","percentage_data_collected_info.csv"))
 }
