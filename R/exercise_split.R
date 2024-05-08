@@ -11,6 +11,7 @@
 #'
 #' @importFrom rio import export
 #' @importFrom dplyr mutate across contains filter select group_by inner_join slice ungroup arrange
+#' @import dplyr
 #' @import tidyr
 #' @import utils
 #' @importFrom lubridate parse_date_time hours days

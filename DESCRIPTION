@@ -1,6 +1,6 @@
 Package: CGMprocessing
 Title: Clean CGM analysis in Diabetes clinical research
-Version: 1.0.1
+Version: 2.0.0
 Authors@R: 
     person("Alice", "Carr", , "acarr1@ualberta.ca", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0704-8843"))

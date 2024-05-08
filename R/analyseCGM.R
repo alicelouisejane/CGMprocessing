@@ -42,6 +42,7 @@
 #'
 #' @importFrom rio import export
 #' @importFrom dplyr mutate across contains filter select group_by inner_join slice ungroup arrange if_else lag lead
+#' @import dplyr
 #' @importFrom tools file_path_sans_ext
 #' @importFrom janitor clean_names
 #' @importFrom anytime anytime

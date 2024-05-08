@@ -34,6 +34,7 @@
 #'
 #' @importFrom rio import export
 #' @importFrom dplyr mutate summarise n lead across contains filter select group_by inner_join slice ungroup arrange bind_rows rename
+#' @import dplyr
 #' @import tidyr
 #' @import utils
 #' @importFrom cowplot plot_grid ggdraw draw_label
@@ -65,13 +66,13 @@ cleanCGM <- function(inputdirectory,
                      expectedwear = "full",
                      impute = F,
                      saveplot = F) {
-library(dplyr)
-  # output directory is created and lists initialised
-  base::dir.create(file.path(paste0(outputdirectory,"/data-clean")), showWarnings = FALSE)
-  base::dir.create(file.path(paste(outputdirectory,"/additonal")), showWarnings = FALSE)
+
+    # output directory is created and lists initialised
+  base::dir.create(file.path(paste0(outputdirectory,"/data-clean/")), showWarnings = FALSE)
+  base::dir.create(file.path(paste0(outputdirectory,"/additonal/")), showWarnings = FALSE)
 
   if( saveplot==T){
-    base::dir.create(file.path(paste(outputdirectory,"/graphs")), showWarnings = FALSE)
+    base::dir.create(file.path(paste0(outputdirectory,"/graphs/")), showWarnings = FALSE)
   }
 
   gaptestoutput <- list()
@@ -154,9 +155,6 @@ library(dplyr)
 
     table <- dplyr::select(table, c(all_of(vars_to_keep)))
 
-    # make sure glucose is numeric
-    table$sensorglucose <-
-      base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
 
     if (combined == F) {
       # order by timestamp
@@ -177,10 +175,7 @@ library(dplyr)
     # find what the interval in the data is ie. 5min for dexcom 15 min for libre
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp) / 60))
 
-    # convert to mmol/l - if loop tests if glucose is mg/dl as would have higher max value than what would be max in mmol/l
-    if (max(table$sensorglucose, na.rm = T) > 30) {
-      table$sensorglucose <- round(table$sensorglucose / 18, digits = 2)
-    }
+
 
     # high and low limits from :
     # https://uk.provider.dexcom.com/sites/g/files/rrchkb126/files/document/2021-09/LBL017451%2BUsing%2BYour%2BG6%2C%2BG6%2C%2BUK%2C%2BEN%2C%2Bmmol_0.pdf
@@ -223,6 +218,12 @@ library(dplyr)
       sensormax <- 28
     }
 
+
+    # make sure glucose is numeric
+    table$sensorglucose <-
+      base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
+    # convert to mmol/l - if tests if glucose is mg/dl as would have higher max value than what would be max in mmol/l
+      table$sensorglucose <- ifelse(table$sensorglucose>30,round(table$sensorglucose / 18, digits = 2),table$sensorglucose)
 
     if (unique(device_vars$type) == "other" | unique(device_vars$type == "dexcomg4")) {
       # if device type is "other" then calibration is likely necessary this is the loop it will be handled in
