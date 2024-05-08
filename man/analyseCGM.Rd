@@ -39,7 +39,7 @@ ie. Every row there is an addition of 2 rows that are same as the original row.}
 
 \item{outputdirectory}{path to folder where output csv file will be uploaded}
 
-\item{outputname}{name of output file}
+\item{outputname}{name of output file. Default "CGMupload".}
 
 \item{belowexcursionlength}{numeric for the time (in minutes) defined as an hypoglycemic exercusion
 default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)}

@@ -20,7 +20,7 @@
 #'
 #'@param outputdirectory path to folder where output csv file will be uploaded
 #'
-#'@param outputname name of output file
+#'@param outputname name of output file. Default "CGMupload".
 #'
 #'@param aboveexcursionlength numeric for the time (in minutes) defined as an hyperglycemic exercusion
 #'  default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
@@ -114,8 +114,8 @@ analyseCGM <- function(exercise = F,
   for (file in 1:base::length(files)) {
     if(combined==F & analysesensorlifetime==T){
     table <-  base::suppressWarnings(rio::import(files[file], guess_max = 10000000))
-    #Id <- unique(table$id)
-    Id <- base::unlist(tools::file_path_sans_ext(basename(files[file])), "_")
+    Id <- unique(table$id)
+    #Id <- base::unlist(tools::file_path_sans_ext(basename(files[file])), "_")
 
     names(table) <- tolower(names(table))
     table <- unique(table)
@@ -126,7 +126,7 @@ analyseCGM <- function(exercise = F,
       table <-  base::suppressWarnings(rio::import(files[file], guess_max = 10000000))
       #Id <- unique(table$id)
       table$id<-sub("_[^_]*$", "", table$id) # if expecting > sensor lifetime then get rid of device id in the underscore
-      Id <- base::unlist(tools::file_path_sans_ext(basename(files[file])), "_")
+      Id <-unique(table$id)
       names(table) <- tolower(names(table))
      # cgmupload["subject_id", f] <- Id
       table <- unique(table)
