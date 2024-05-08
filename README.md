@@ -155,16 +155,21 @@ by “_“)</td>
 </tbody>
 </table>
 
-\###CGM variable dictionary
+### CGM variable dictionary
 
 *cgmvariable\_dictionary.xlsx* included as part of this package is a
-dictionary used to rename variables of interest with standardization.
-names (as above) without much user input. Alternatively you can manually
-change your files to follow this variable standardization.
+dictionary used to rename variables of interest with standardization of
+the names from the raw CGM files (as above) without much user input.
 
 -   Optional argument in *cleanCGM* allows for custom CGM dictionaries
     to be used if the names of the raw data CGM files are different to
-    what is pre-specified or you are using other sensors.
+    what is pre-specified or you are using other sensors. Construct you
+    dictionary exactly as below replacing the *old\_vars* with your raw
+    CGM files variable names of interest that matches with the
+    *new\_vars*. Do not change the *new\_vars*. Edit your *type* of
+    device and *expecteddaysofwear* relavent to the lifetime of one of
+    these sensors. for eg. A Dexcom g6/7 sensor lasts 10 days, a Libre
+    sensor lasts 14 days.
 
 **Table**: Example of dictionary for renaming old variables in raw CGM
 data files, edit as required. “Type” column in this dictionary is only

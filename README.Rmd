@@ -74,11 +74,11 @@ ___
 | timestamp     | Sensor timestamp of glucose reading                                                                                                             |
 | sensorglucose | Sensor glucose value                                                                                                                            |
 
-###CGM variable dictionary
+### CGM variable dictionary
 
-_cgmvariable_dictionary.xlsx_ included as part of this package is a dictionary used to rename variables of interest with standardization. names (as above) without much user input. Alternatively you can manually change your files to follow this variable standardization. 
+_cgmvariable_dictionary.xlsx_ included as part of this package is a dictionary used to rename variables of interest with standardization of the names from the raw CGM files (as above) without much user input. 
 
-- Optional argument in _cleanCGM_ allows for custom CGM dictionaries to be used if the names of the raw data CGM files  are different to what is pre-specified or you are using other sensors. 
+- Optional argument in _cleanCGM_ allows for custom CGM dictionaries to be used if the names of the raw data CGM files are different to what is pre-specified or you are using other sensors. Construct you dictionary exactly as below replacing the _old_vars_ with your raw CGM files variable names of interest that matches with the _new_vars_. Do not change the _new_vars_. Edit your _type_ of device and _expecteddaysofwear_ relavent to the lifetime of one of these sensors. for eg. A Dexcom g6/7 sensor lasts 10 days, a Libre sensor lasts 14 days.
 
 **Table**: Example of dictionary for renaming old variables in raw CGM data files, edit as required. "Type" column in this dictionary is only for user only for reference, sensor type is specified as an argument in the function.Ensure you enter the lifetime of the sensor used. Example is of some variable names I have come across in each of the sensors- Always check you data to see what the variable names are and edit this dictionary. If you have a mixed download of CGM of files, I recommend separating into folders by sensor type to avoid confusion before processing. Additionally please note the use of ID_VISIT_DEVICEID in the type other. This is used to ensure unique identification in clinical study data that has been pre-aggregated. Device id is also kept for use in raw files, however if you purposefully have more than one device (ie a 30 day wear file) then this will not effect outputs of analyseCGM but you must specify this. However, the **percentage_data_collected_info.xlsx** will be per unique device.   
 
