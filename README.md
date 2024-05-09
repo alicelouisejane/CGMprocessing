@@ -899,40 +899,55 @@ will just give the subject ID with the device id removed.</td>
 </tr>
 <tr class="odd">
 <td>exercise</td>
-<td>Only created when exercise=T. See section on exercise analysis for
-more info</td>
+<td>Value of TRUE or FALSE determines if these metrics are analysed in
+the context of post exrcise time periods. Only created when exercise=T.
+See section on exercise analysis for more info</td>
 </tr>
 <tr class="even">
+<td>hourspostexercise</td>
+<td>Numeric of number of the user defined time period  to analyse post
+exercise. Default is 6 hours. Only created when exercise=T. See section
+on exercise analysis for more info</td>
+</tr>
+<tr class="odd">
 <td>start_cgm_analysis</td>
 <td>Minimum datetime in table</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>end_cgm_analysis</td>
 <td>Maximum datetime in table</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>interval</td>
 <td>Most common interval in the data, for dexcom this is 300 seconds
 (5min) for libre this is put to 900 seconds (15 min)</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td>num_days_cgmwear</td>
 <td>Number of unique dates in the file. Accurate percentage wear and and
 sensor drop out information can be found in the
 percentage_data_collected_info.csv output from cleanCGM</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>num_hours_cgmwear</td>
 <td>Time difference from the max date to the min date. Accurate
 percentage wear and and sensor drop out information can be found in the
 percentage_data_collected_info.csv output from cleanCGM</td>
 </tr>
+<tr class="even">
+<td>totaltime_mins</td>
+<td>Total time in the table in minutes , this is calculated from the
+number of rows present multipled by the time interval, NOT max and min
+as this would not be accurate if there were gaps in the data. Accurate
+percentage wear and and sensor drop out information can be found in the
+percentage_data_collected_info.csv output from cleanCGM</td>
+</tr>
 <tr class="odd">
 <td>totaltime_hours</td>
-<td>Total time in the table, this is calculated from the number of rows
-present multipled by the time interval, NOT max and min as this would
-not be accurate if there were gaps in the data. Accurate percentage wear
-and and sensor drop out information can be found in the
+<td>Total time in the table in hours, this is calculated from the number
+of rows present multipled by the time interval, NOT max and min as this
+would not be accurate if there were gaps in the data. Accurate
+percentage wear and and sensor drop out information can be found in the
 percentage_data_collected_info.csv output from cleanCGM</td>
 </tr>
 <tr class="even">

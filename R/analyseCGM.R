@@ -266,7 +266,6 @@ analyseCGM <- function(exercise = F,
 
 
     # Beginning of generation of table
-    cgmupload["totaltime_mins", f] <- as.numeric(totaltime) / 60
     cgmupload["start_cgm_analysis", f] <- base::as.character(min(table$timestamp, na.rm = T))
     cgmupload["end_cgm_analysis", f] <- base::as.character(max(table$timestamp, na.rm = T))
 
@@ -284,6 +283,8 @@ analyseCGM <- function(exercise = F,
     cgmupload["num_hours_cgmwear", f] <- as.numeric(round(difftime(max(table$timestamp), min(table$timestamp), units = "hours")))
 
     # this is more the true amount of recorded time as it goes off specific each recorded value
+    cgmupload["totaltime_mins", f] <- as.numeric(totaltime) / 60
+
     cgmupload["totaltime_hours", f] <- base::round(unlist(totaltime) / 3600)
 
     # number of readings- include interpolated
