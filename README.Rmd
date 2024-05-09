@@ -7,7 +7,24 @@ output: md_document
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of CGMprocessing is to provide functions for preparing, cleaning and analyzing Continuous Glucose Monitoring (CGM) data for clinical diabetes studies. Glycemic variables and definitions are inline with the International Consensus on Use of Continuous Glucose Monitoring: [Danne 2017](https://care.diabetesjournals.org/content/40/12/1631) and [Battelino 2023](https://pubmed.ncbi.nlm.nih.gov/36493795/). This package also includes a specific function for use in the context of diabetes exercise studies, which splits up CGM into specific time periods post-exercise. Specific outputs are inline with CGM outputs in exercise recommendations in type 1 diabetes: [Riddell 2017](https://pubmed.ncbi.nlm.nih.gov/28126459/).
+___
+# Installation
+
+You can install the latest version of `CGMprocessing` directly from GitHub using the `remotes` package. First, make sure you have `remotes` installed:
+
+```r
+install.packages("remotes")
+```
+Then, you can install `CGMprocessing` using the following command:
+
+```r
+remotes::install_github("alicelouisejane/CGMprocessing")
+```
+If you encounter any issues during installation, please [open an issue](https://github.com/alicelouisejane/CGMprocessing/issues) on the GitHub repository page
+
+___
+
+The goal of `CGMprocessing` is to provide functions for preparing, cleaning and analyzing Continuous Glucose Monitoring (CGM) data for clinical diabetes studies. Glycemic variables and definitions are inline with the International Consensus on Use of Continuous Glucose Monitoring: [Danne 2017](https://care.diabetesjournals.org/content/40/12/1631) and [Battelino 2023](https://pubmed.ncbi.nlm.nih.gov/36493795/). This package also includes a specific function for use in the context of diabetes exercise studies, which splits up CGM into specific time periods post-exercise. Specific outputs are inline with CGM outputs in exercise recommendations in type 1 diabetes: [Riddell 2017](https://pubmed.ncbi.nlm.nih.gov/28126459/).
 
 This code was developed based off work by [T. Vigers](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0216851)
 

@@ -2,7 +2,27 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of CGMprocessing is to provide functions for preparing,
+------------------------------------------------------------------------
+
+# Installation
+
+You can install the latest version of `CGMprocessing` directly from
+GitHub using the `remotes` package. First, make sure you have `remotes`
+installed:
+
+    install.packages("remotes")
+
+Then, you can install `CGMprocessing` using the following command:
+
+    remotes::install_github("alicelouisejane/CGMprocessing")
+
+If you encounter any issues during installation, please [open an
+issue](https://github.com/alicelouisejane/CGMprocessing/issues) on the
+GitHub repository page
+
+------------------------------------------------------------------------
+
+The goal of `CGMprocessing` is to provide functions for preparing,
 cleaning and analyzing Continuous Glucose Monitoring (CGM) data for
 clinical diabetes studies. Glycemic variables and definitions are inline
 with the International Consensus on Use of Continuous Glucose
