@@ -541,6 +541,17 @@ The function will output:
 </tbody>
 </table>
 
+-   **CGM traces graphed** When saveplot=T the graph as below is
+    outputted with some information on the number of days present and
+    number of hours this CGM was worn for (each line is a unique date).
+    Also includes the amount of data the sensor actually collected over
+    wear time, giving you an indication of the amount of sensor drop
+    out. When dealing with combined clinial study data this graph will
+    output for each individual in the study as well as for the overall
+    cohort.
+
+![Summary of CGM traces](man/figures/patient_CGMgraph_cleancgm.png)
+
 ------------------------------------------------------------------------
 
 ------------------------------------------------------------------------
@@ -863,8 +874,8 @@ hours only and night time hours only:
 
 <table>
 <colgroup>
-<col style="width: 8%" />
-<col style="width: 91%" />
+<col style="width: 7%" />
+<col style="width: 92%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -876,7 +887,8 @@ hours only and night time hours only:
 <tr class="odd">
 <td>time_of_day</td>
 <td>Defines if CGM variables are summarising all time, day time hours
-only or nighttime hours only</td>
+only or nighttime hours only. There will always be 3 rows per
+individual</td>
 </tr>
 <tr class="even">
 <td>subject_id</td>
@@ -891,31 +903,37 @@ will just give the subject ID with the device id removed.</td>
 more info</td>
 </tr>
 <tr class="even">
-<td>totaltime_mins</td>
-<td>Total time in the table, this is calculated from the number of rows
-present, assuming each row is 5 min reading NOT max and min as this
-would not be accurate if there were gaps in the data</td>
+<td>start_cgm_analysis</td>
+<td>Minimum datetime in table</td>
 </tr>
 <tr class="odd">
-<td>start_cgm_analysis</td>
-<td>min datetime in table</td>
+<td>end_cgm_analysis</td>
+<td>Maximum datetime in table</td>
 </tr>
 <tr class="even">
-<td>end_cgm_analysis</td>
-<td>max datetime in table</td>
-</tr>
-<tr class="odd">
 <td>interval</td>
 <td>Most common interval in the data, for dexcom this is 300 seconds
 (5min) for libre this is put to 900 seconds (15 min)</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td>num_days_cgmwear</td>
-<td>Total time / (24\*60\*60))</td>
+<td>Number of unique dates in the file. Accurate percentage wear and and
+sensor drop out information can be found in the
+percentage_data_collected_info.csv output from cleanCGM</td>
+</tr>
+<tr class="even">
+<td>num_hours_cgmwear</td>
+<td>Time difference from the max date to the min date. Accurate
+percentage wear and and sensor drop out information can be found in the
+percentage_data_collected_info.csv output from cleanCGM</td>
 </tr>
 <tr class="odd">
 <td>totaltime_hours</td>
-<td>Total time / 3600</td>
+<td>Total time in the table, this is calculated from the number of rows
+present multipled by the time interval, NOT max and min as this would
+not be accurate if there were gaps in the data. Accurate percentage wear
+and and sensor drop out information can be found in the
+percentage_data_collected_info.csv output from cleanCGM</td>
 </tr>
 <tr class="even">
 <td>total_sensor_readings</td>
@@ -927,23 +945,23 @@ would not be accurate if there were gaps in the data</td>
 </tr>
 <tr class="even">
 <td>estimated_a1c%</td>
-<td>Estimated Hba1C in % based on hba1c equation and mean glucose</td>
+<td>Estimated HbA1c in % based on HbA1c equation and mean glucose</td>
 </tr>
 <tr class="odd">
 <td>estimated_a1cmmolmol</td>
-<td>Estimated Hba1C in mmol/mol based on hba1c equation and mean
+<td>Estimated HbA1c in mmol/mol based on hba1c equation and mean
 glucose</td>
 </tr>
 <tr class="even">
 <td>gmimmol/mol</td>
 <td>Glucose Management Indicator mmol/mol inndicates the average Hba1C
-level that would be expected based on mean.  gmi and estimated Hba1C
+level that would be expected based on mean.  GMI and estimated HbA1c
 should therefore be similar</td>
 </tr>
 <tr class="odd">
 <td>gmi%</td>
 <td>Glucose Management Indicator % inndicates the average Hba1C level
-that would be expected based on mean.  gmi and estimated Hba1C should
+that would be expected based on mean.  GMI and estimated HbA1c should
 therefore be similar</td>
 </tr>
 <tr class="even">
@@ -956,7 +974,7 @@ therefore be similar</td>
 </tr>
 <tr class="even">
 <td>q3_sensor</td>
-<td>upper quartile sensor glucose</td>
+<td>Upper quartile sensor glucose</td>
 </tr>
 <tr class="odd">
 <td>standard_deviation</td>
@@ -964,7 +982,7 @@ therefore be similar</td>
 </tr>
 <tr class="even">
 <td>cv</td>
-<td>Coefficient of variation. NOTE: SD is highly influenced by the mean
+<td>Coefficient of variation. SD is highly influenced by the mean
 glucose – someone with a higher mean glucose will have a higher SD. The
 CV divides the SD/mean x100. This division helps “correct” and normalize
 glucose variability, allowing us to set a single variability goal that
@@ -1107,53 +1125,70 @@ to total time of the sensor calculated previously</td>
 </tr>
 <tr class="odd">
 <td>r_mage</td>
-<td>Mean Amplitude Glycemic Excursion. Option to asses average of the
-differences greater than either  entire dataset SD, 2SD, etc</td>
+<td>Mean Amplitude Glycemic Excursion. MAGE is an arithmetic average of
+either the upward or downward of all glycemic excursions exceeding the
+threshold (standard deviation of blood glucose obtained from all blood
+glucose concentrations within 24-hour period). Option to asses average
+of the differences greater than either  entire dataset SD, 2SD, etc</td>
 </tr>
 <tr class="even">
 <td>j_index</td>
-<td>Combination of information from mean and SD of all glucose values
-doi: 10.1055/s-2007-979906.</td>
+<td>J index is a measure of quality of glycemic control based on the
+combination of information from the mean and SD calculated as 0.001 ×
+(mean + SD) doi: 10.1055/s-2007-979906.</td>
 </tr>
 <tr class="odd">
 <td>conga_1</td>
 <td>Continuous overlapping net glycemic action, with _n appended as the
-indicated number of hours being assessed (in this case 1 hour)</td>
+indicated number of hours being assessed (in this case 1 hour). CONGA(n)
+represents the SD of all valid differences between a current observation
+and an observation (n) hours earlier. <a
+href="doi:10.1089/dia.2005.7.253"
+class="uri">doi:10.1089/dia.2005.7.253</a></td>
 </tr>
 <tr class="even">
 <td>modd</td>
-<td>Mean of daily difference</td>
+<td>The mean of daily differences (MODD) index provides an estimation of
+interday glycemic variability. This parameter is calculated as the mean
+of absolute differences between glucose values at corresponding time
+points of consecutive days. Doi: 10.1007/BF01218495</td>
 </tr>
 <tr class="odd">
 <td>lbgi</td>
 <td>Low Blood Glucose Index, equation is for glucose in mmol/l (dc1386
-appendix)</td>
+appendix). The LBGI is a specific indicator for hypoglycemia as well as
+the trend toward hypoglycemic excursions and provides a continuous
+measure for estimating hypoglycemic risk</td>
 </tr>
 <tr class="even">
 <td>hbgi</td>
 <td>High Blood Glucose Index, equation is for glucose in mmol/l (dc1386
-appendix)</td>
+appendix). The HBGI is a specific indicator for hyperglycemia as well as
+the trend toward hyperglycemia excursions and provides a continuous
+measure for estimating hyperglycemia risk</td>
 </tr>
 <tr class="odd">
 <td>min_spent_7_15_exercise</td>
 <td>Only created when exercise=T. Time in mins spent between 7-15 mmol/l
-during exercise (Ridell 2017).</td>
+during exercise doi: 10.1016/S2213-8587(17)30014-1 (Riddell 2017)</td>
 </tr>
 <tr class="even">
 <td>percent_time_7_15_exercise</td>
 <td>Only created when exercise=T. Percentage of time in mins spent
-between 7-15 mmol/l during exercise (Ridell 2017).</td>
+between 7-15 mmol/l during exercise doi: 10.1016/S2213-8587(17)30014-1
+(Riddell 2017)</td>
 </tr>
 <tr class="odd">
 <td>min_spent_5_12_exercise</td>
 <td>Only created when exercise=T. Time in mins spent between 5-12 mmol/l
-in the time up to 6 hours post exercise (Ridell 2017).</td>
+in the time up to 6 hours post exercise doi:
+10.1016/S2213-8587(17)30014-1 (Riddell 2017)</td>
 </tr>
 <tr class="even">
 <td>percent_time_5_12_exercise</td>
 <td>Only created when exercise=T. Percentage of time in mins spent
-between 5-12 mmol/l in the time up to 6 hours post exercise (Ridell
-2017).</td>
+between 5-12 mmol/l in the time up to 6 hours post exercise doi:
+10.1016/S2213-8587(17)30014-1 (Riddell 2017)</td>
 </tr>
 </tbody>
 </table>

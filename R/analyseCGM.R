@@ -260,7 +260,7 @@ analyseCGM <- function(exercise = F,
       cgmupload["subject_id", f] <- Id
       }
 
-    # Total time in the dataset is the whole length of the dataset x 300 as each row represetns 300 seconds (5mins)
+    # Total time in the dataset is the whole length of the dataset x interval as each row represetns interval seconds (15/5mins)
     #table will have been interpoated in preprocessing, the number of minutes/cgm points interpolated can be derived from that output file
     totaltime <- nrow(table) * interval
 
@@ -278,13 +278,15 @@ analyseCGM <- function(exercise = F,
     table$id<-Id
     }
 
-    # this should actually be total time /24*3600 for more accurate day count
-    cgmupload["num_days_cgmwear", f] <- as.numeric(round(difftime(max(table$timestamp),min(table$timestamp),units ="days")))
+    # day count AS DATES in the file
+    cgmupload["num_days_cgmwear", f] <- length(unique(table$date))
 
-    # this is more the true amount of time as it goes off specific hours
+    cgmupload["num_hours_cgmwear", f] <- as.numeric(round(difftime(max(table$timestamp), min(table$timestamp), units = "hours")))
+
+    # this is more the true amount of recorded time as it goes off specific each recorded value
     cgmupload["totaltime_hours", f] <- base::round(unlist(totaltime) / 3600)
 
-    # number of readings- wouldnt include interpolated, if we were to include interpolation it should be in this function after this call
+    # number of readings- include interpolated
     cgmupload["total_sensor_readings", f] <- base::as.numeric(base::nrow(unique(table[!is.na(table$sensorglucose),])))
 
 
