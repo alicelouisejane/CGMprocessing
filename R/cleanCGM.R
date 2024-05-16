@@ -29,8 +29,6 @@
 #'
 #' @param saveplot TRUE/FALSE Default is TRUE. Save the overall CGM plot over the total number of days of wear. Will not generate if device type is "other"
 #'
-#' @param impute - for development. needs fixing and implementing correctly
-#'
 #'
 #' @importFrom rio import export
 #' @importFrom dplyr mutate summarise n lead across contains filter select group_by inner_join slice ungroup arrange bind_rows rename
@@ -64,7 +62,6 @@ cleanCGM <- function(inputdirectory,
                      removerow = F,
                      nrow = 3,
                      expectedwear = "full",
-                     impute = F,
                      saveplot = F) {
 
     # output directory is created and lists initialised
@@ -360,21 +357,22 @@ cleanCGM <- function(inputdirectory,
         # Calculate number of rows to insert
         #interval is the time one row is equivelent to in mins
         interpolated_df$num_rows <- floor(round(abs(interpolated_df$diff),digits = 0)/interval)-1
+        interpolated_df$num_rows <- ifelse(abs(interpolated_df$diff)>=9 & abs(interpolated_df$diff)<10 & interpolated_df$num_rows==0,1,interpolated_df$num_rows)
 
-        #keep only the timestamps where the gap was <20 min
-        interpolated_df<-dplyr::filter(interpolated_df,abs(diff)<=20)
+        #keep only the timestamps where the gap was <20 min or >=9
+        interpolated_df<-dplyr::filter(interpolated_df,abs(diff)<=20 & abs(diff)>=9)
         interpolated_rows<-list()
         # Iterate over rows in the input data frame
         for (i in seq_len(nrow(interpolated_df))) {
           # Generate interpolated timestamps
-
+          id_value=interpolated_df$id[i]
           # Create data frame with interpolated timestamps and sensor values
           interpolated_rows[[i]] <- data.frame(
             timestamp = seq(interpolated_df$timestamp[i], by = "5 mins", length.out = interpolated_df$num_rows[i] + 1)[-1],
             sensorglucose = interpolated_df$sensorglucose[i],
-            id=interpolated_df$id[i],
-            num_gaps_interpolated=nrow(interpolated_df),
-            minutes_interpolated=sum(interpolated_df$num_rows)*5
+            id=id_value,
+            num_gaps_interpolated=nrow(interpolated_df[interpolated_df$id==id_value,]),
+            minutes_interpolated=sum(interpolated_df$num_rows[interpolated_df$id==id_value])*5
           )
         }
 
@@ -417,11 +415,12 @@ cleanCGM <- function(inputdirectory,
       data_collected_output[[f]] <- NULL
     }
 
-      table<-merge(table,select(table_interpolated,id,timestamp,sensorglucose),all=T) %>%
+      table<-rbind(table,select(table_interpolated,id,timestamp,sensorglucose)) %>%
         dplyr::group_by(id) %>%
-        dplyr::arrange(timestamp)
+        dplyr::arrange(timestamp) %>%
+        ungroup()
 
-    table <- dplyr::filter(table, !is.na(table$sensorglucose))
+    table <- dplyr::filter(table, !is.na(sensorglucose))
 
 
     if (combined == F) {

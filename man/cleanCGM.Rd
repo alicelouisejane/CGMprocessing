@@ -14,7 +14,6 @@ cleanCGM(
   removerow = F,
   nrow = 3,
   expectedwear = "full",
-  impute = F,
   saveplot = F
 )
 }
@@ -38,10 +37,6 @@ If NULL, the default file included with the package is used.}
 \item{nrow}{used in conjunction with removerow=T. Number of rows to removed before variable names. Requires inspection of data files}
 
 \item{expectedwear}{Default is full, can acccept a numeric. This indicates if a participant was expected to wear the CGM for the lifetime of the sensor or for a particular number of days in a study. Enter the number of days expected as a numeric if so.}
-
-\item{impute}{\itemize{
-\item for development. needs fixing and implementing correctly
-}}
 
 \item{saveplot}{TRUE/FALSE Default is TRUE. Save the overall CGM plot over the total number of days of wear. Will not generate if device type is "other"}
 }
