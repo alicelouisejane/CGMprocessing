@@ -144,7 +144,14 @@ analyseCGM <- function(exercise = F,
       }
     }else if(combined==T & analysesensorlifetime==F){
       table <-  files[[file]]
-      table$id<- sub("_[^_]*$", "", table$id) # if expecting > sensor lifetime then get rid of device id in the underscore
+      # if expecting > sensor lifetime then get rid of deviceid in the underscore so were not grouping and creating cgm metrics per different deviceid
+      #in clinical trials a combined data set would be of ID and visits so we want to keep visits in the unique identifier and only remove device id
+      #the below should work when you have ID_VISIT_DEVICEID layout or no deviceid and just ID_VISIT this will be preserved in the id variable
+       table$id<-ifelse(
+        lengths(regmatches(table$id, gregexpr("_", table$id))) == 2,
+        sub("_[^_]*$", "", table$id),
+        table$id
+      )
       Id <- unique(table$id)
       names(table) <- tolower(names(table))
       #cgmupload["subject_id", f] <- Id
