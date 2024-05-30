@@ -232,9 +232,12 @@ analyseCGM <- function(exercise = F,
       if (exercise == T) {
         f<-file
         cgmupload["subject_id", f] <- Id
+
+        cgmupload["exercise_timeperiod", f] <-sub("^[^_]*_", "",tools::file_path_sans_ext(basename(files[file])))
+
         # files not set up correctly
         if (is.null(hourspostexercise) | !("diff_disc" %in% names(table))) {
-          stop("Input files not set up correctly for this step- refer to README. Ensure you also use hourspostexercise argument to specify time of interest post-exercise.")
+          stop("Missing hourspostexercise input or input files not set up correctly for this step- refer to README. Ensure you  use hourspostexercise argument to specify time of interest post-exercise that you used in exercise_split.")
         }
         hours_post_exercise=hourspostexercise
         table$date<-as.Date(table$timestamp)
