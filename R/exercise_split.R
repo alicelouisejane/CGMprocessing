@@ -22,13 +22,12 @@
 #' @seealso
 #' analyseCGM and cleanCGM
 
-
-
-
 exercise_split <- function(inputdirectory,outputdirectory,exercisefile,hourspostexercise) {
 
 #load exercise file here:
 exerciseinstance <- rio::import(exercisefile)
+
+exerciseinstance$pt_id<-as.character(exerciseinstance$pt_id)
 
 # files to split
   files <- base::list.files(path = inputdirectory, full.names = TRUE) # list of data files that have been ran through CGM clean (and prepare sheets if neccessary)
@@ -77,6 +76,7 @@ exerciseinstance <- rio::import(exercisefile)
       dplyr::select(pt_id,startdatetime,finishdatetime,type,durationmins)
 
     table$pt_id<-patid
+    table$pt_id<-as.character(table$pt_id)
     table$type<-exercise_type
 
     if (nrow(exerciseinstance_pt) == 0) {
