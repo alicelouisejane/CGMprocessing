@@ -112,7 +112,7 @@ cleanCGM <- function(inputdirectory,
 
     # if dealing with some libre raw data there may be additional rows added,
     # if youre certain there arent then use FALSE otherwise TRUE can handle both ways
-    if (removerow == T) { # this was causing some issues in the previous if call: & grepl("V[0-9]",names(table)[1])
+    if (removerow == T & grepl("^V[0-9]$",names(table)[1])) { # this was causing some issues in the previous if call: & grepl("V[0-9]",names(table)[1])
       names(table) <- table[nrow, ]
       table <- table[-(1:nrow), ]
     } else if (removerow == T | !grepl("V[0-9]", names(table)[1])) {
