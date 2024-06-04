@@ -136,6 +136,7 @@ cleanCGM <- function(inputdirectory,
     # try to anticipate problematic dates
     if (is.character(table$timestamp)) {
       table$timestamp <- stringr::str_replace_all(table$timestamp, "T", " ")
+      table$timestamp <- stringr::str_replace_all(table$timestamp, "/", "-")
       #table$timestamp <- as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("ymd HMS", "dmy HMS", "dmy HM", "mdy HMS", "mdy HM")), tz = "UTC")
       table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
     } else if (!is.character(table$timestamp)) {
@@ -362,6 +363,8 @@ cleanCGM <- function(inputdirectory,
         #keep only the timestamps where the gap was <20 min or >=9
         interpolated_df<-dplyr::filter(interpolated_df,abs(diff)<=20 & abs(diff)>=9)
         interpolated_rows<-list()
+
+        if (nrow(interpolated_df) > 0) {
         # Iterate over rows in the input data frame
         for (i in seq_len(nrow(interpolated_df))) {
           # Generate interpolated timestamps
@@ -375,15 +378,15 @@ cleanCGM <- function(inputdirectory,
             minutes_interpolated=sum(interpolated_df$num_rows[interpolated_df$id==id_value])*5
           )
         }
+          table_interpolated<-dplyr::bind_rows(interpolated_rows)
+        }
 
-        table_interpolated<-dplyr::bind_rows(interpolated_rows)
-
-        percentageexpectedwear <- table
 
         percentage_dropout <- gaptest %>%
           dplyr::group_by(id) %>%
           dplyr::summarise(totallosttime = sum(abs(diff)))
 
+        if (nrow(interpolated_df) > 0) {
         percentageexpectedwear <- table %>%
           dplyr::group_by(id) %>%
           dplyr::mutate(percentage_expectedwear_overstudy = as.numeric((round(difftime(max(timestamp), min(timestamp), units = "hours")) / expectedtime) * 100)) %>%
@@ -396,6 +399,25 @@ cleanCGM <- function(inputdirectory,
           merge(unique(select(table_interpolated,id,num_gaps_interpolated,minutes_interpolated)))
 
         data_collected_output[[f]] <- percentageexpectedwear
+        table<-rbind(table,select(table_interpolated,id,timestamp,sensorglucose)) %>%
+          dplyr::group_by(id) %>%
+          dplyr::arrange(timestamp) %>%
+          ungroup()
+
+        } else if (nrow(interpolated_df)==0){
+          percentageexpectedwear <- table %>%
+            dplyr::group_by(id) %>%
+            dplyr::mutate(percentage_expectedwear_overstudy = as.numeric((round(difftime(max(timestamp), min(timestamp), units = "hours")) / expectedtime) * 100)) %>%
+            select(id, percentage_expectedwear_overstudy) %>%
+            unique() %>%
+            base::merge(percentage_dropout, by = "id", all = T) %>%
+            mutate(totallosttime = ifelse(is.na(totallosttime), 0, totallosttime)) %>%
+            mutate(percentage_datacollected_overstudy = ((expectedtime_mins - totallosttime) / expectedtime_mins) * 100) %>%
+            mutate(percentage_dropout_overstudy = (totallosttime / expectedtime_mins) * 100) %>%
+            mutate(num_gaps_interpolated=0,minutes_interpolated=0)
+        }
+
+
       } else if (nrow(gaptest) == 0) { # there were no gaps in wear
         percentageexpectedwear <- table %>%
           dplyr::group_by(id) %>%
@@ -415,10 +437,6 @@ cleanCGM <- function(inputdirectory,
       data_collected_output[[f]] <- NULL
     }
 
-      table<-rbind(table,select(table_interpolated,id,timestamp,sensorglucose)) %>%
-        dplyr::group_by(id) %>%
-        dplyr::arrange(timestamp) %>%
-        ungroup()
 
     table <- dplyr::filter(table, !is.na(sensorglucose))
 
