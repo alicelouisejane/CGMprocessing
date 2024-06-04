@@ -39,7 +39,7 @@
 #' @import ggplot2
 #' @import hms
 #' @importFrom tools file_path_sans_ext
-#' @importFrom anytime anytime
+#' @importFrom anytime anytime addFormats
 #' @import stats
 #' @importFrom here here
 #' @import stringr
@@ -133,11 +133,12 @@ cleanCGM <- function(inputdirectory,
       !!!stats::setNames(as.character(cgm_dict$new_vars), cgm_dict$old_vars)
     )
 
+    anytime::addFormats("%d-%m-%Y %H:%M")
     # try to anticipate problematic dates
     if (is.character(table$timestamp)) {
       table$timestamp <- stringr::str_replace_all(table$timestamp, "T", " ")
       table$timestamp <- stringr::str_replace_all(table$timestamp, "/", "-")
-      #table$timestamp <- as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("ymd HMS", "dmy HMS", "dmy HM", "mdy HMS", "mdy HM")), tz = "UTC")
+      #table$timestamp <- as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("ymd_HMS", "dmyHMS", "dmyHM", "mdyHMS", "mdyHM")), tz = "UTC")
       table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
     } else if (!is.character(table$timestamp)) {
       table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
@@ -147,6 +148,8 @@ cleanCGM <- function(inputdirectory,
     # this get rid of the first lines in dexcom as all these rows miss a timestamp
     # but also gets rid of any problematic missing rows
     table <- dplyr::filter(table, !is.na(timestamp))
+
+
 
     # keep only variables of interest
     vars_to_keep <- dplyr::intersect(names(table), unique(cgm_dict$new_vars))
