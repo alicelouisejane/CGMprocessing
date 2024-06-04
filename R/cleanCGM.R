@@ -136,7 +136,7 @@ cleanCGM <- function(inputdirectory,
     # try to anticipate problematic dates
     if (is.character(table$timestamp)) {
       table$timestamp <- stringr::str_replace_all(table$timestamp, "T", " ")
-      table$timestamp <- as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("ymd HMS", "dmy HMS", "dmy HM", "mdy HMS", "mdy HM")), tz = "UTC")
+      #table$timestamp <- as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("ymd HMS", "dmy HMS", "dmy HM", "mdy HMS", "mdy HM")), tz = "UTC")
       table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
     } else if (!is.character(table$timestamp)) {
       table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
