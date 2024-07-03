@@ -64,7 +64,7 @@ cleanCGM <- function(inputdirectory,
                      expectedwear = "full",
                      saveplot = F) {
 
-    # output directory is created and lists initialised
+  # output directory is created and lists initialised
   base::dir.create(file.path(paste0(outputdirectory,"data-clean/")), showWarnings = FALSE)
   base::dir.create(file.path(paste0(outputdirectory,"additional/")), showWarnings = FALSE)
 
@@ -224,7 +224,7 @@ cleanCGM <- function(inputdirectory,
     table$sensorglucose <-
       base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
     # convert to mmol/l - if tests if glucose is mg/dl as would have higher max value than what would be max in mmol/l
-      table$sensorglucose <- ifelse(table$sensorglucose>30,round(table$sensorglucose / 18, digits = 2),table$sensorglucose)
+    table$sensorglucose <- ifelse(table$sensorglucose>30,round(table$sensorglucose / 18, digits = 2),table$sensorglucose)
 
     if (unique(device_vars$type) == "other" | unique(device_vars$type == "dexcomg4")) {
       # if device type is "other" then calibration is likely necessary this is the loop it will be handled in
@@ -300,7 +300,7 @@ cleanCGM <- function(inputdirectory,
           dplyr::mutate(diff = as.numeric(difftime(timestamp, lead(timestamp), units = "mins"))) %>%
           dplyr::mutate(gap = ifelse(abs(diff) > interval + 1, 1, 0)) %>%
           dplyr::filter(gap == 1) %>%
-        dplyr::select(id, timestamp, diff)
+          dplyr::select(id, timestamp, diff)
 
         # you can edit this code further to include measures for percentage expected wear etc depending on your needs
         # as this data is expected to be coalesed there with be multiple sensor uploads from the same person
@@ -368,19 +368,19 @@ cleanCGM <- function(inputdirectory,
         interpolated_rows<-list()
 
         if (nrow(interpolated_df) > 0) {
-        # Iterate over rows in the input data frame
-        for (i in seq_len(nrow(interpolated_df))) {
-          # Generate interpolated timestamps
-          id_value=interpolated_df$id[i]
-          # Create data frame with interpolated timestamps and sensor values
-          interpolated_rows[[i]] <- data.frame(
-            timestamp = seq(interpolated_df$timestamp[i], by = "5 mins", length.out = interpolated_df$num_rows[i] + 1)[-1],
-            sensorglucose = interpolated_df$sensorglucose[i],
-            id=id_value,
-            num_gaps_interpolated=nrow(interpolated_df[interpolated_df$id==id_value,]),
-            minutes_interpolated=sum(interpolated_df$num_rows[interpolated_df$id==id_value])*5
-          )
-        }
+          # Iterate over rows in the input data frame
+          for (i in seq_len(nrow(interpolated_df))) {
+            # Generate interpolated timestamps
+            id_value=interpolated_df$id[i]
+            # Create data frame with interpolated timestamps and sensor values
+            interpolated_rows[[i]] <- data.frame(
+              timestamp = seq(interpolated_df$timestamp[i], by = "5 mins", length.out = interpolated_df$num_rows[i] + 1)[-1],
+              sensorglucose = interpolated_df$sensorglucose[i],
+              id=id_value,
+              num_gaps_interpolated=nrow(interpolated_df[interpolated_df$id==id_value,]),
+              minutes_interpolated=sum(interpolated_df$num_rows[interpolated_df$id==id_value])*5
+            )
+          }
           table_interpolated<-dplyr::bind_rows(interpolated_rows)
         }
 
@@ -390,22 +390,22 @@ cleanCGM <- function(inputdirectory,
           dplyr::summarise(totallosttime = sum(abs(diff)))
 
         if (nrow(interpolated_df) > 0) {
-        percentageexpectedwear <- table %>%
-          dplyr::group_by(id) %>%
-          dplyr::mutate(percentage_expectedwear_overstudy = as.numeric((round(difftime(max(timestamp), min(timestamp), units = "hours")) / expectedtime) * 100)) %>%
-          select(id, percentage_expectedwear_overstudy) %>%
-          unique() %>%
-          base::merge(percentage_dropout, by = "id", all = T) %>%
-          mutate(totallosttime = ifelse(is.na(totallosttime), 0, totallosttime)) %>%
-          mutate(percentage_datacollected_overstudy = ((expectedtime_mins - totallosttime) / expectedtime_mins) * 100) %>%
-          mutate(percentage_dropout_overstudy = (totallosttime / expectedtime_mins) * 100) %>%
-          merge(unique(select(table_interpolated,id,num_gaps_interpolated,minutes_interpolated)))
+          percentageexpectedwear <- table %>%
+            dplyr::group_by(id) %>%
+            dplyr::mutate(percentage_expectedwear_overstudy = as.numeric((round(difftime(max(timestamp), min(timestamp), units = "hours")) / expectedtime) * 100)) %>%
+            select(id, percentage_expectedwear_overstudy) %>%
+            unique() %>%
+            base::merge(percentage_dropout, by = "id", all = T) %>%
+            mutate(totallosttime = ifelse(is.na(totallosttime), 0, totallosttime)) %>%
+            mutate(percentage_datacollected_overstudy = ((expectedtime_mins - totallosttime) / expectedtime_mins) * 100) %>%
+            mutate(percentage_dropout_overstudy = (totallosttime / expectedtime_mins) * 100) %>%
+            merge(unique(select(table_interpolated,id,num_gaps_interpolated,minutes_interpolated)))
 
-        data_collected_output[[f]] <- percentageexpectedwear
-        table<-rbind(table,select(table_interpolated,id,timestamp,sensorglucose)) %>%
-          dplyr::group_by(id) %>%
-          dplyr::arrange(timestamp) %>%
-          ungroup()
+          data_collected_output[[f]] <- percentageexpectedwear
+          table<-rbind(table,select(table_interpolated,id,timestamp,sensorglucose)) %>%
+            dplyr::group_by(id) %>%
+            dplyr::arrange(timestamp) %>%
+            ungroup()
 
         } else if (nrow(interpolated_df)==0){
           percentageexpectedwear <- table %>%
@@ -420,6 +420,7 @@ cleanCGM <- function(inputdirectory,
             mutate(num_gaps_interpolated=0,minutes_interpolated=0)
         }
 
+        data_collected_output[[f]] <- percentageexpectedwear
 
       } else if (nrow(gaptest) == 0) { # there were no gaps in wear
         percentageexpectedwear <- table %>%
@@ -432,8 +433,8 @@ cleanCGM <- function(inputdirectory,
           mutate(percentage_dropout_overstudy = 0) %>%
           mutate(num_gaps_interpolated=0) %>%
           mutate(minutes_interpolated=0)
-
         data_collected_output[[f]] <- percentageexpectedwear
+
       }
     } else if (is.na(unique(cgm_dict$expectedwear)) & expectedwear == "full") {
       warning("Missing value for expected wear in CGM dictionary file. Unable to generated data collected output. Please update dictionary accordingly or use expectedwear function argument.")
@@ -447,10 +448,10 @@ cleanCGM <- function(inputdirectory,
     if (combined == F) {
 
       #for IQR summary ribbons round time up to the nearest 5 min to make a neater summary line
-    summary_table<-table %>%
-      dplyr::mutate(date = base::as.Date(timestamp)) %>%
-      dplyr::mutate(time = hms::as_hms(timestamp)) %>%
-      dplyr::mutate(test=hms::round_hms(time, secs = interval*60))
+      summary_table<-table %>%
+        dplyr::mutate(date = base::as.Date(timestamp)) %>%
+        dplyr::mutate(time = hms::as_hms(timestamp)) %>%
+        dplyr::mutate(test=hms::round_hms(time, secs = interval*60))
 
       graph1 <- table %>%
         dplyr::mutate(date = base::as.Date(timestamp)) %>%
