@@ -985,7 +985,19 @@ analyseCGM <- function(exercise = F,
     cgmupload["lbgi", f] <- base::round(base::mean(stats::na.omit(rl)), digits = 2)
     cgmupload["hbgi", f] <- base::round(base::mean(stats::na.omit(rh)), digits = 2)
 
-  }
+    }
+    if(exercise==F){
+    if(length(time_of_day_list)<3){
+      # Full predefined list of time of day, if data was incomplete it may not include night time/day time
+      # add the id and time of day that is missing which will allow for easy identification of this rather than leaving blank
+      full_list <- c("all time", "day time", "night time")
+      # Identify the missing elements
+      missing_elements <- setdiff(full_list, time_of_day_list)
+
+      cgmupload["time_of_day",f+1]<- missing_elements
+      cgmupload["subject_id", f+1] <- Id
+    }
+    }
   }
 
   # Write file.
