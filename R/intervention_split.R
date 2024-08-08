@@ -21,7 +21,6 @@
 #' analyseCGM and cleanCGM
 #'
 
-
 intervention_split <- function(inputdirectory,
                                aggregated=F,
                                outputdirectory,
@@ -85,10 +84,10 @@ for (f in 1:base::length(files)) {
 
   if(length(seq_along(intervention_points))==1) {
     before_intervention <- dplyr::filter(table_int, date < base::unique(na.omit(date[intervention==intervention_points[1]]))) %>%
-      dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[i])) %>%
+      dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[1])) %>%
       dplyr::select(-intervention)
     after_intervention <- dplyr::filter(table_int,date >= base::unique(na.omit(date[intervention==intervention_points[1]]))) %>%
-      dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[i]))%>%
+      dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[1]))%>%
       dplyr::select(-intervention)
 
     rio::export(x=before_intervention,file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention",intervention_points[1],".csv"))
@@ -143,8 +142,12 @@ for (f in 1:base::length(files)) {
 
       if (length(seq_along(intervention_points))==1) {
         # Before the first intervention
-        before_intervention_all_patients[[j]] <- dplyr::filter(table_int_patient, date < base::unique(na.omit(date[intervention==intervention_points[1]])))
-        after_intervention_all_patients[[j]] <- dplyr::filter(table_int_patient,date >= base::unique(na.omit(date[intervention==intervention_points[1]])))
+        before_intervention_all_patients[[j]] <- dplyr::filter(table_int_patient, date < base::unique(na.omit(date[intervention==intervention_points[1]])))%>%
+          dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[1])) %>%
+          dplyr::select(-intervention)
+        after_intervention_all_patients[[j]] <- dplyr::filter(table_int_patient,date >= base::unique(na.omit(date[intervention==intervention_points[1]])))%>%
+          dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[1])) %>%
+          dplyr::select(-intervention)
       } else if(length(seq_along(intervention_points))>1) {
 
         for (i in seq_along(intervention_points)) {
