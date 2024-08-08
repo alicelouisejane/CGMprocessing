@@ -56,6 +56,8 @@ will find this in the man file on this GitHub:
 
 -   [analyseCGM output](#analysecgm)
 
+-   [intervention\_split output](#intervention_split)
+
 ### Example File Structures
 
 -   **/data-raw**: raw data from sensor
@@ -570,7 +572,11 @@ The function will output:
     output for each individual in the study as well as for the overall
     cohort.
 
-![Summary of CGM traces](man/figures/patient_CGMgraph_cleancgm.png)
+<figure>
+<img src="man/figures/patient_CGMgraph_cleancgm.png"
+alt="Summary of CGM traces" />
+<figcaption aria-hidden="true">Summary of CGM traces</figcaption>
+</figure>
 
 ------------------------------------------------------------------------
 
@@ -606,8 +612,12 @@ In the diabetes exercise literature it is usual to assess:
 -   The next day post exercise (06:00-24:00 ie. midnight of that next
     day)
 
-![Example of relevant time periods post
-exercise](man/figures/exercise_periods_new.png)
+<figure>
+<img src="man/figures/exercise_periods_new.png"
+alt="Example of relevant time periods post exercise" />
+<figcaption aria-hidden="true">Example of relevant time periods post
+exercise</figcaption>
+</figure>
 
 #### <a id="exercisefile-listofexercisetimestamps"></a> exercisefile - List of exercise time stamps
 
@@ -781,7 +791,84 @@ Also output are:
 -   **all\_CGM.csv** which is all data from everyone with respect to
     exercise as below:
 
-![all\_CGM.csv output](man/figures/allcgm_explanation.png)
+![all\_CGM.csv output](man/figures/allcgm_explanation.png)  
+\_\_\_
+
+## <a id="intervention_split"></a> intervention\_split
+
+------------------------------------------------------------------------
+
+**Functionality:** **intervention\_split()** a more generic version of
+exercise\_split, it is a function written to split up a CGM file
+(cleaned by *cleanCGM* or another way) into before or after identified
+time(s) of intervention. Intervention splitting is based on an
+interventionfile- a list of dates of an intervention for every person in
+study [Jump to interventionfile - List of intervention
+dates](#interventionfile-listofinterventiondates) for the structure of
+this. Function takes files in the same structure as outputted from
+[cleanCGM output](#cleancgm-output). The resulting split files can then
+be individually ran through [analyseCGM](#analysecgm) or taken for
+further analysis. This function works for pre-aggregated data if
+specificed in the funcitons parameters.
+
+#### <a id="interventionfile-listofinterventiondates"></a> interventionfile - List of intervention dates
+
+-   File required for intervention splitting, listing the date of each
+    intervention and specifying the type of intervention. Intervention
+    column assigns the labels in the resulting files so ensure it is
+    something you can understand. All patients can be in this one file.
+    Enter dates in chosen standardized date format.
+
+It should be structured as below:
+
+<table>
+<thead>
+<tr class="header">
+<th>id</th>
+<th>intervention</th>
+<th>date</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>patient_1</td>
+<td>transplant1</td>
+<td>Aug 18 2022</td>
+</tr>
+<tr class="even">
+<td>patient_1</td>
+<td>transplant2</td>
+<td>Mar 08 2023</td>
+</tr>
+<tr class="odd">
+<td>patient_2</td>
+<td>transplant1</td>
+<td>Sept 18 2022</td>
+</tr>
+<tr class="even">
+<td>patient_2</td>
+<td>transplant2</td>
+<td>Mar 20 2023</td>
+</tr>
+<tr class="odd">
+<td>patient_2</td>
+<td>transplant3</td>
+<td>April 18 2024</td>
+</tr>
+</tbody>
+</table>
+
+#### <a id="intervention_splitoutput"></a> intervention\_split output
+
+-   Folders of data-before\_intervention and data-after\_intervention
+
+-   If data was not pre aggregated, files will be of each individual ID
+    with the intervention type specified in the filenames. This is also
+    repeated in the id column within the file. This will allow
+    *analyseCGM()* to create metrics for the specific times before or
+    after intervention for each ID. (if data was preaggregated it will
+    be the same but all within one file of before intervention and after
+    intervention).
 
 ------------------------------------------------------------------------
 

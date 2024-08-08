@@ -39,6 +39,8 @@ See parameters for explanations of the arguments per each function. You will fin
 
 - [analyseCGM output](#analysecgm)
 
+- [intervention_split output](#intervention_split)
+
 ### Example File Structures
 - **/data-raw**: raw data from sensor
 
@@ -268,6 +270,33 @@ Also output are:
 - **all_CGM.csv** which is all data from everyone with respect to exercise as below: 
 
 ![all_CGM.csv output](man/figures/allcgm_explanation.png)   
+___
+
+## <a id="intervention_split"></a> intervention_split
+
+___
+
+**Functionality:** **intervention_split()** a more generic version of exercise_split, it is a function written to split up a CGM file (cleaned by _cleanCGM_ or another way) into before or after identified time(s) of intervention. Intervention splitting is based on an interventionfile- a list of dates of an intervention for every person in study [Jump to interventionfile - List of intervention dates ](#interventionfile-listofinterventiondates) for the structure of this. Function takes files in the same structure as outputted from [cleanCGM output](#cleancgm-output). The resulting split files can then be individually ran through [analyseCGM](#analysecgm) or taken for further analysis. This function works for pre-aggregated data if specificed in the funcitons parameters.
+
+
+#### <a id="interventionfile-listofinterventiondates"></a> interventionfile - List of intervention dates 
+- File required for intervention splitting, listing the date of each intervention and specifying the type of intervention. Intervention column assigns the labels in the resulting files so ensure it is something you can understand. All patients can be in this one file. Enter dates in chosen standardized date format.
+
+It should be structured as below: 
+
+| id        | intervention | date          |
+| --------- | ------------ | ------------- |
+| patient_1 | transplant1  | Aug 18 2022   |
+| patient_1 | transplant2  | Mar 08 2023   |
+| patient_2 | transplant1  | Sept 18 2022  |
+| patient_2 | transplant2  | Mar 20 2023   |
+| patient_2 | transplant3  | April 18 2024 |
+
+#### <a id="intervention_splitoutput"></a> intervention_split output
+
+- Folders of data-before_intervention and data-after_intervention
+
+- If data was not pre aggregated, files will be of each individual ID with the intervention type specified in the filenames. This is also repeated in the id column within the file. This will allow _analyseCGM()_ to create metrics for the specific times before or after intervention for each ID. (if data was preaggregated it will be the same but all within one file of before intervention and after intervention). 
 
 ___
 

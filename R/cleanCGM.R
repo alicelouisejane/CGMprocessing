@@ -17,7 +17,7 @@
 #' @param device Use "other" if CGM required calibrations. Options are can be any dexcom (g4,g6etc), libre (1,2,pro), or "other." Important to specify what device is being used for the alignment of standardized variable names and to ensure sensor limits, ensure device type is also in the cgm dictionary next to variables.
 #'  "Other" is specified if dealing with data that requires calibration or is in an alternative layout. Gap testing and standard percentage wear and droupout measures will not be created with this but number of days worn will be reported. Edit code as necessary if sensor is other and calibration is false
 #'
-#' @param combined TRUE/FALSE. Default is FALSE. This aims to handle pre aggregated data where more than one individual/visit etc. is in the file, most likely from external clinical study databases. Before running this code please combine patient ID, visit name and device id into one Id type variable. Still specify all variable names in the CGM dictionary.
+#' @param aggregated TRUE/FALSE. Default is FALSE. This aims to handle pre aggregated data where more than one individual/visit etc. is in the file, most likely from external clinical study databases. Before running this code please combine patient ID, visit name and device id into one Id type variable. Still specify all variable names in the CGM dictionary.
 #'
 #' @param calibration only works for device = "other" TRUE/FALSE Default is FALSE. The majority of CGM data will not require a calibration, this is sensor dependant. For guardian sensors, dexcom g4 (and older generations) and medtronic ipro2 blood calibrations were required. The layout of the data may effect how this argument works please ensure calibration blood glucoses are labelled in a recordtype variable in the raw data (ie. in JAEB data)
 #'
@@ -57,7 +57,7 @@ cleanCGM <- function(inputdirectory,
                      outputdirectory,
                      cgmdictionaryfile=NULL,
                      device = "other",
-                     combined = F,
+                     aggregated = F,
                      calibration = F,
                      removerow = F,
                      nrow = 3,
@@ -75,9 +75,9 @@ cleanCGM <- function(inputdirectory,
   gaptestoutput <- list()
   data_collected_output <- list()
 
-  if (device != "other" & combined == T) {
-    stop(print("Only use combined=TRUE with device=other. Separate raw download files are expected for use with device options dexcom or libre. See README for help"))
-  } else if (combined == F) {
+  if (device != "other" & aggregated == T) {
+    stop(print("Only use aggregated=TRUE with device=other. Separate raw download files are expected for use with device options dexcom or libre. See README for help"))
+  } else if (aggregated == F) {
 
     if (is.null(cgmdictionaryfile)) {
       cgmdictionaryfile <- system.file("extdata", "cgmvariable_dictionary.xlsx", package = "CGMprocessing")
@@ -87,25 +87,25 @@ cleanCGM <- function(inputdirectory,
     # Read in data: anticipated structure is a single file containing raw CGM downloads per individual
     files <- base::list.files(path = inputdirectory, full.names = TRUE)
 
-  } else if (device == "other" & combined == T) {
+  } else if (device == "other" & aggregated == T) {
     if (is.null(cgmdictionaryfile)) {
       cgmdictionaryfile <- system.file("extdata", "cgmvariable_dictionary.xlsx", package = "CGMprocessing")
     }
     cgm_dict <- rio::import(cgmdictionaryfile, guess_max = 10000000)
 
-    # Read in data: anticipated structure here is a preproccessed dataframe of combined CGM from a study
+    # Read in data: anticipated structure here is a preproccessed dataframe of aggregated CGM from a study
     files <- inputdirectory
   }
 
   # Step 1: clean the CGM data
   for (f in 1:base::length(files)) {
-    if (combined == F) {
+    if (aggregated == F) {
       # id from filename (used only in dexcom and libre if device is other then this is irrelavent)
       Id <- tools::file_path_sans_ext(basename(files[f]))
       # Id <- gsub("^([^_]+_[^_]+).*", "\\1", Id)
       print(Id)
       table <- base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
-    } else if (device == "other" & combined == T) {
+    } else if (device == "other" & aggregated == T) {
       table <- base::suppressWarnings(rio::import(files))
     }
 
@@ -157,7 +157,7 @@ cleanCGM <- function(inputdirectory,
     table <- dplyr::select(table, c(all_of(vars_to_keep)))
 
 
-    if (combined == F) {
+    if (aggregated == F) {
       # order by timestamp
       table$subjectid <- Id
       table <- tidyr::unite(table,id,subjectid, deviceid)
@@ -167,9 +167,9 @@ cleanCGM <- function(inputdirectory,
       } else if (length(unique(table$id)) == 1) {
         table <- table[base::order(table$timestamp), ]
       }
-    } else if (combined == T) {
+    } else if (aggregated == T) {
       table <- table[order(table$id, table$timestamp), ]
-      Id <- "combined_data"
+      Id <- "aggregated_data"
     }
 
 
@@ -445,7 +445,7 @@ cleanCGM <- function(inputdirectory,
     table <- dplyr::filter(table, !is.na(sensorglucose))
 
 
-    if (combined == F) {
+    if (aggregated == F) {
 
       #for IQR summary ribbons round time up to the nearest 5 min to make a neater summary line
       summary_table<-table %>%
@@ -501,7 +501,7 @@ cleanCGM <- function(inputdirectory,
         # save the plot, all patients
         ggplot2::ggsave(paste0(outputdirectory,"graphs/", Id, "_summaryCGM.pdf"), graphoutput_title, width = 6, height = 6)
       }
-    } else if (combined == T) {
+    } else if (aggregated == T) {
       data_collected_output_final <- dplyr::bind_rows(data_collected_output[!sapply(data_collected_output, is.null)])
 
       summary_table<-table %>%

@@ -3,6 +3,7 @@
 export(analyseCGM)
 export(cleanCGM)
 export(exercise_split)
+export(intervention_split)
 import(data.table)
 import(dplyr)
 import(ggplot2)
