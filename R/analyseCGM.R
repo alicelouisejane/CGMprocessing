@@ -8,9 +8,9 @@
 #'@param exercise Default is FALSE. In house development of time windowed exercise files.
 #' Format of these files is slightly different to the output files from [CGMprocessing::cleanCGM()] function
 #'
-#'@param combined TRUE/FALSE. Default is FALSE. This aims to handle pre aggregated data where more than one individual/visit etc. is in the file, most likely from external clinical study databases.
+#'@param aggregated TRUE/FALSE. Default is FALSE. This aims to handle pre aggregated data where more than one individual/visit etc. is in the file, most likely from external clinical study databases.
 #'
-#'@param analysesensorlifetime TRUE/FALSE. Default is TRUE. Used only with combined= TRUE. If you are expecting to analyse continuous data that is > sensor lifetime then specify to FALSE. This is to ensure multiple sensors from one person are not aggregated by accident.
+#'@param analysesensorlifetime TRUE/FALSE. Default is TRUE. Used only with aggregated= TRUE. If you are expecting to analyse continuous data that is > sensor lifetime then specify to FALSE. This is to ensure multiple sensors from one person are not aggregated by accident.
 #'
 #'@param libre For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
 #' Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method.
@@ -69,7 +69,7 @@
 
 analyseCGM <- function(exercise = F,
                        hourspostexercise=NULL,
-                       combined=F,
+                       aggregated=F,
                        analysesensorlifetime=T,
                        libre=T,
                        inputdirectory,
@@ -82,7 +82,7 @@ analyseCGM <- function(exercise = F,
                        format = "rows",
                        printname = T) {
 
-  if(combined==F){
+  if(aggregated==F){
   # define lists
   files <- base::list.files(path = inputdirectory, full.names = TRUE)
   if(exercise==T){
@@ -94,7 +94,7 @@ analyseCGM <- function(exercise = F,
     cgmupload <- base::as.data.frame(base::matrix(nrow = 0, ncol = base::length(files)*3))
     base::colnames(cgmupload) <- base::rep("Record", base::length(files)*3)
   }
-  }else if(combined==T){
+  }else if(aggregated==T){
     table_test<-rio::import(inputdirectory)
     files<-split(table_test,table_test$id)
     if(exercise==T){
@@ -112,7 +112,7 @@ analyseCGM <- function(exercise = F,
 
 
   for (file in 1:base::length(files)) {
-    if(combined==F & analysesensorlifetime==T){
+    if(aggregated==F & analysesensorlifetime==T){
     table <-  base::suppressWarnings(rio::import(files[file], guess_max = 10000000))
     Id <- unique(table$id)
     #Id <- base::unlist(tools::file_path_sans_ext(basename(files[file])), "_")
@@ -122,7 +122,7 @@ analyseCGM <- function(exercise = F,
     if (printname == T) {
       print(basename(files[file]))
     }
-    }else if(combined==F & analysesensorlifetime==F){
+    }else if(aggregated==F & analysesensorlifetime==F){
       table <-  base::suppressWarnings(rio::import(files[file], guess_max = 10000000))
       #Id <- unique(table$id)
       table$id<-sub("_[^_]*$", "", table$id) # if expecting > sensor lifetime then get rid of device id in the underscore
@@ -133,7 +133,7 @@ analyseCGM <- function(exercise = F,
       if (printname == T) {
         print(basename(files[file]))
       }
-    }else if(combined==T & analysesensorlifetime==T){
+    }else if(aggregated==T & analysesensorlifetime==T){
       table <-  files[[file]]
       Id <- unique(table$id)
       names(table) <- tolower(names(table))
@@ -142,10 +142,10 @@ analyseCGM <- function(exercise = F,
       if (printname == T) {
         print(Id)
       }
-    }else if(combined==T & analysesensorlifetime==F){
+    }else if(aggregated==T & analysesensorlifetime==F){
       table <-  files[[file]]
       # if expecting > sensor lifetime then get rid of deviceid in the underscore so were not grouping and creating cgm metrics per different deviceid
-      #in clinical trials a combined data set would be of ID and visits so we want to keep visits in the unique identifier and only remove device id
+      #in clinical trials a aggregated data set would be of ID and visits so we want to keep visits in the unique identifier and only remove device id
       #the below should work when you have ID_VISIT_DEVICEID layout or no deviceid and just ID_VISIT this will be preserved in the id variable
        table$id<-ifelse(
         lengths(regmatches(table$id, gregexpr("_", table$id))) == 2,
