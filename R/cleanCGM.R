@@ -52,6 +52,9 @@
 #' @seealso
 #' analyseCGM and exercise_split
 #'
+inputdirectory = "/Users/alicecarr/Desktop/UofA/Clincal transplant program/CGM in ITx/islettransplantcgmdata/Names removed/Libre/"
+outputdirectory = "/Users/alicecarr/Desktop/transplant program/CGM in ITx/data-clean"
+aggregated = F,device = "libre",cgmdictionaryfile = "/Users/alicecarr/Desktop/CGMprocessing/inst/extdata/cgmvariable_dictionary.xlsx")
 
 cleanCGM <- function(inputdirectory,
                      outputdirectory,
@@ -361,10 +364,13 @@ cleanCGM <- function(inputdirectory,
         # Calculate number of rows to insert
         #interval is the time one row is equivelent to in mins
         interpolated_df$num_rows <- floor(round(abs(interpolated_df$diff),digits = 0)/interval)-1
-        interpolated_df$num_rows <- ifelse(abs(interpolated_df$diff)>=9 & abs(interpolated_df$diff)<10 & interpolated_df$num_rows==0,1,interpolated_df$num_rows)
+        interpolated_df$num_rows <- ifelse(abs(interpolated_df$diff)>=(interval*2)-1 & abs(interpolated_df$diff)<(interval*2) & interpolated_df$num_rows==0,1,interpolated_df$num_rows)
 
         #keep only the timestamps where the gap was <20 min or >=9
-        interpolated_df<-dplyr::filter(interpolated_df,abs(diff)<=20 & abs(diff)>=9)
+
+        maxgap=ifelse(device=="libre",30, 20)
+        interpolated_df<-dplyr::filter(interpolated_df,num_rows>0)
+        interpolated_df<-dplyr::filter(interpolated_df,abs(diff)<=maxgap)
         interpolated_rows<-list()
 
         if (nrow(interpolated_df) > 0) {
@@ -374,7 +380,7 @@ cleanCGM <- function(inputdirectory,
             id_value=interpolated_df$id[i]
             # Create data frame with interpolated timestamps and sensor values
             interpolated_rows[[i]] <- data.frame(
-              timestamp = seq(interpolated_df$timestamp[i], by = "5 mins", length.out = interpolated_df$num_rows[i] + 1)[-1],
+              timestamp = seq(interpolated_df$timestamp[i], by = paste0(interval," min"), length.out = interpolated_df$num_rows[i] + 1)[-1],
               sensorglucose = interpolated_df$sensorglucose[i],
               id=id_value,
               num_gaps_interpolated=nrow(interpolated_df[interpolated_df$id==id_value,]),
