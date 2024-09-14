@@ -52,9 +52,6 @@
 #' @seealso
 #' analyseCGM and exercise_split
 #'
-inputdirectory = "/Users/alicecarr/Desktop/UofA/Clincal transplant program/CGM in ITx/islettransplantcgmdata/Names removed/Libre/"
-outputdirectory = "/Users/alicecarr/Desktop/transplant program/CGM in ITx/data-clean"
-aggregated = F,device = "libre",cgmdictionaryfile = "/Users/alicecarr/Desktop/CGMprocessing/inst/extdata/cgmvariable_dictionary.xlsx")
 
 cleanCGM <- function(inputdirectory,
                      outputdirectory,
