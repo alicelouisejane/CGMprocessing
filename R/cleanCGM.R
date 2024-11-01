@@ -157,27 +157,6 @@ cleanCGM <- function(inputdirectory,
     table <- dplyr::select(table, c(all_of(vars_to_keep)))
 
 
-    if (aggregated == F) {
-      # order by timestamp
-      table$subjectid <- Id
-      table <- tidyr::unite(table,id,subjectid, deviceid)
-      if (length(unique(table$id)) > 1) {
-        table <- table[order(table$id, table$timestamp), ]
-        print(paste("There is likely more than one Device ID in this individuals file. Check this ID if you are not expecting this:", Id))
-      } else if (length(unique(table$id)) == 1) {
-        table <- table[base::order(table$timestamp), ]
-      }
-    } else if (aggregated == T) {
-      table <- table[order(table$id, table$timestamp), ]
-      Id <- "aggregated_data"
-    }
-
-
-    # find what the interval in the data is ie. 5min for dexcom 15 min for libre
-    interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp) / 60))
-
-
-
     # high and low limits from :
     # https://uk.provider.dexcom.com/sites/g/files/rrchkb126/files/document/2021-09/LBL017451%2BUsing%2BYour%2BG6%2C%2BG6%2C%2BUK%2C%2BEN%2C%2Bmmol_0.pdf
     # suggests libre 2 has different limits to libre 1 but this is not the case whan i look at my own data
@@ -220,9 +199,33 @@ cleanCGM <- function(inputdirectory,
     }
 
 
+    if (aggregated == F) {
+      # order by timestamp
+      table$id <- Id
+      if (length(unique(table$deviceid)) > 1) {
+        table <- table[order(table$timestamp), ]
+        print(paste("There is more than one Device ID in this individuals file. Check this ID if you are not expecting this:", Id))
+      } else if (length(unique(table$deviceid)) == 1) {
+        table <- table[base::order(table$timestamp), ]
+      }
+      table<-dplyr::select(table,-deviceid)
+
+    } else if (aggregated == T) {
+      table <- table[order(table$id, table$timestamp), ]
+      Id <- "aggregated_data"
+    }
+
+
+    # find what the interval in the data is ie. 5min for dexcom 15 min for libre
+    interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp) / 60))
+
+
     # make sure glucose is numeric
     table$sensorglucose <-
       base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
+
+    table <- dplyr::filter(table, !is.na(sensorglucose))
+
     # convert to mmol/l - if tests if glucose is mg/dl as would have higher max value than what would be max in mmol/l
     table$sensorglucose <- ifelse(table$sensorglucose>30,round(table$sensorglucose / 18, digits = 2),table$sensorglucose)
 
@@ -352,6 +355,16 @@ cleanCGM <- function(inputdirectory,
         expectedtime_mins <- 60 * 24 * expectedwear
       }
 
+      totaltime<-table %>%
+        dplyr::group_by(id) %>%
+        summarize(totaltime=as.numeric(difftime(max(timestamp), min(timestamp), units = "min")))
+
+      if(pracma::Mode(totaltime$totaltime)>expectedtime_mins*2){
+        warning(paste("The total time (or most prevalent total time for aggregated data) is more than double the expected days of wear entered of", unique(cgm_dict$expecteddaysofwear), "days. For calculation of percentage wear the expected time has been defaulted to be the total time of",pracma::Mode(totaltime$totaltime), "(mins)"))
+        expectedtime <- pracma::Mode(totaltime$totaltime)/60 #hours
+        expectedtime_mins <- pracma::Mode(totaltime$totaltime) # mins
+      }
+
       if (nrow(gaptest) > 0) {
 
         # interpolate gaps <= 20 min
@@ -386,7 +399,6 @@ cleanCGM <- function(inputdirectory,
           }
           table_interpolated<-dplyr::bind_rows(interpolated_rows)
         }
-
 
         percentage_dropout <- gaptest %>%
           dplyr::group_by(id) %>%
@@ -461,7 +473,7 @@ cleanCGM <- function(inputdirectory,
         dplyr::mutate(time = hms::as_hms(timestamp)) %>%
         ggplot2::ggplot(ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
         ggplot2::geom_path(ggplot2::aes(group = as.factor(date), colour = as.factor(date)), colour = "grey") +
-        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over:",length(unique(base::as.Date(table$timestamp))),"days; total time:", as.numeric(round(difftime(max(table$timestamp), min(table$timestamp), units = "hours"))), "hours", "\n Raw data collected:", round(mean(percentageexpectedwear$percentage_datacollected_overstudy, na.rm = T)), "%")) +
+        ggplot2::labs(x = "Time", y = "Glucose", title = paste("Summary of CGM wear over:",length(unique(base::as.Date(table$timestamp))),"days", "\n Raw data collected:", round(mean(percentageexpectedwear$percentage_datacollected_overstudy, na.rm = T)), "%")) +
         ggplot2::theme_minimal() +
         ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
         # median hi low and IQR could be the same as each other...
@@ -563,7 +575,7 @@ cleanCGM <- function(inputdirectory,
 
         graph_list[[i]] <- ggplot2::ggplot(data = data, ggplot2::aes(x = as.POSIXct(time, format = "%H:%M:%S"), y = as.numeric(sensorglucose))) +
           ggplot2::geom_path(ggplot2::aes(group = interaction(as.factor(date), id), colour = as.factor(date)), colour = "grey") +
-          ggplot2::labs(x = "Time", y = "Glucose", title = paste("Patient ID:", i, "\n Summary of CGM wear over:",length(unique(data$date)),"days; total time:", as.numeric(round(difftime(max(data$timestamp), min(data$timestamp), units = "hours"))), "hours", "\n Raw data collected over expected study time:", round(data_collected_output_final$percentage_datacollected_overstudy[data_collected_output_final$id == i]), "%")) +
+          ggplot2::labs(x = "Time", y = "Glucose", title = paste("Patient ID:", i, "\n Summary of CGM wear over:",length(unique(data$date)),"days", "\n Raw data collected over expected study time:", round(data_collected_output_final$percentage_datacollected_overstudy[data_collected_output_final$id == i]), "%")) +
           ggplot2::theme_minimal() +
           ggplot2::scale_x_datetime(date_labels = "%H:%M", date_breaks = "2 hours") +
           # median hi low and IQR could be the same as each other...
