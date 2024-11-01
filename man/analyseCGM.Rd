@@ -9,7 +9,7 @@ analyseCGM(
   hourspostexercise = NULL,
   aggregated = F,
   analysesensorlifetime = T,
-  libre = T,
+  fivemindata = T,
   inputdirectory,
   outputdirectory,
   outputname = "CGMupload",
@@ -31,8 +31,8 @@ Format of these files is slightly different to the output files from \code{\link
 
 \item{analysesensorlifetime}{TRUE/FALSE. Default is TRUE. Used only with aggregated= TRUE. If you are expecting to analyse continuous data that is > sensor lifetime then specify to FALSE. This is to ensure multiple sensors from one person are not aggregated by accident.}
 
-\item{libre}{For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
-Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method.
+\item{fivemindata}{For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
+Default is TRUE assuming fivemindata. Currently 15min data ie. libre files will get  "dummy" coded to 5 minute data with carry forward method.
 ie. Every row there is an addition of 2 rows that are same as the original row.}
 
 \item{inputdirectory}{path to folder containing files created by \code{\link[=cleanCGM]{cleanCGM()}} function}

@@ -12,8 +12,8 @@
 #'
 #'@param analysesensorlifetime TRUE/FALSE. Default is TRUE. Used only with aggregated= TRUE. If you are expecting to analyse continuous data that is > sensor lifetime then specify to FALSE. This is to ensure multiple sensors from one person are not aggregated by accident.
 #'
-#'@param libre For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
-#' Default is FALSE. Currently libre files have "dummy" coded 5 minute data with carry forward method.
+#'@param fivemindata For calculation of the correct interval (libre 15 min or 900s, CGM 5 min or 300s).
+#' Default is TRUE assuming fivemindata. Currently 15min data ie. libre files will get  "dummy" coded to 5 minute data with carry forward method.
 #' ie. Every row there is an addition of 2 rows that are same as the original row.
 #'
 #'@param inputdirectory path to folder containing files created by [CGMprocessing::cleanCGM()] function
@@ -71,7 +71,7 @@ analyseCGM <- function(exercise = F,
                        hourspostexercise=NULL,
                        aggregated=F,
                        analysesensorlifetime=T,
-                       libre=T,
+                       fivemindata=T,
                        inputdirectory,
                        outputdirectory,
                        outputname="CGMupload",
@@ -177,14 +177,14 @@ analyseCGM <- function(exercise = F,
     #define interval of readings
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
-    if(libre==T & interval==900){
+    if(fivemindata==F & interval==900){
       interval<- interval/3
       # all sensor readings ensure there are "5min readings" for the analyseCGM function.
 
       #Pseudo code it this way mainly for the hypo definition which relies on 15mins
         table<-slice(table,rep(1:n(), each = 3))
 
-    }else if(libre==T & interval!=900){
+    }else if(fivemindata==T & interval!=900){
       table<-table
     }
 
@@ -279,11 +279,11 @@ analyseCGM <- function(exercise = F,
     cgmupload["start_cgm_analysis", f] <- base::as.character(min(table$timestamp, na.rm = T))
     cgmupload["end_cgm_analysis", f] <- base::as.character(max(table$timestamp, na.rm = T))
 
-    if(libre==T){
-    cgmupload["interval", f] <- interval*3
-    table$id<-Id
-    }else if(libre==F){
+    if(fivemindata==T){
     cgmupload["interval", f] <- interval
+    table$id<-Id
+    }else if(fivemindata==F){
+    cgmupload["interval", f] <- interval*3
     table$id<-Id
     }
 
