@@ -198,6 +198,12 @@ cleanCGM <- function(inputdirectory,
       sensormax <- 28
     }
 
+    # error catch to skip print error message and skip to next file if all event types were not sensor glucoses
+
+    if (nrow(table)==0){
+      print(base::paste("Skipping file:", Id, " It is likely that there are no recorded sensor glucose events. Please check this file or exclude from analysis."))
+      next
+    }
 
     if (aggregated == F) {
       # order by timestamp

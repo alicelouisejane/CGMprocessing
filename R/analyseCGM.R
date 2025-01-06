@@ -204,7 +204,7 @@ analyseCGM <- function(exercise = F,
     table_24<-table
 
     #day time 6am to midnight
-    table_day<-dplyr::filter(table,lubridate::hour(table$timestamp) >= 6 & hour(table$timestamp) < 24) %>%
+    table_day<-dplyr::filter(table,lubridate::hour(table$timestamp) >= 6 & lubridate::hour(table$timestamp) < 24) %>%
       dplyr::arrange(timestamp)
 
     #sleep midnight to 6am
