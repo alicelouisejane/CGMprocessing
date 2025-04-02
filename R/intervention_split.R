@@ -20,7 +20,6 @@
 #' @seealso
 #' analyseCGM and cleanCGM
 #'
-
 intervention_split <- function(inputdirectory,
                                aggregated=F,
                                outputdirectory,
@@ -28,7 +27,7 @@ intervention_split <- function(inputdirectory,
 
 #load intervention file here:
 intervention <- rio::import(interventionfile)
-intervention$date<-anytime::anytime(intervention$date)
+intervention$date<-as.POSIXct(intervention$date,tz = "UCT")
 
 if (aggregated == F) {
   # Read in data: anticipated structure is a single folder containing clean CGM  per individual
@@ -52,7 +51,7 @@ for (f in 1:base::length(files)) {
   if (aggregated == F) {
     # id from filename (used only in dexcom and libre if device is other then this is irrelavent)
     Id <- tools::file_path_sans_ext(basename(files[f]))
-    # Id <- gsub("^([^_]+_[^_]+).*", "\\1", Id)
+    #Id <- gsub("^([^_]+_[^_]+).*", "\\1", Id)
     print(Id)
     table <- base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
   } else if (aggregated == T) {
@@ -65,7 +64,7 @@ for (f in 1:base::length(files)) {
       stop(print(paste("Data seems aggregated. There is more than one base::unique id in this individuals file, use aggregated=T. Check this ID if you are not expecting this:", Id)))
     } else if (length(base::unique(table$id)) == 1) {
       # order by timestamp
-      table$id <- Id
+      table$id <- gsub("^([^_]+).*", "\\1", table$id) # keep only the ID value and no other parts
       table <- table[base::order(table$timestamp), ]
     }
 
@@ -78,56 +77,58 @@ for (f in 1:base::length(files)) {
   #merge table with interventions to find where to split
   table_int<-merge(table,intervention,all.x=T,by=c("id","date"))
 
+  table_int<-arrange(table_int,timestamp)
+
 
  if(aggregated==F){
-  intervention_points <- base::sort(base::unique(na.omit(table_int$intervention)))
+  intervention_points <- base::unique(na.omit(table_int$intervention))
 
   if(length(seq_along(intervention_points))==1) {
     before_intervention <- dplyr::filter(table_int, date < base::unique(na.omit(date[intervention==intervention_points[1]]))) %>%
-      dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[1])) %>%
+      dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[1])) %>%
       dplyr::select(-intervention)
     after_intervention <- dplyr::filter(table_int,date >= base::unique(na.omit(date[intervention==intervention_points[1]]))) %>%
-      dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[1]))%>%
+      dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[1]))%>%
       dplyr::select(-intervention)
 
-    rio::export(x=before_intervention,file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention",intervention_points[1],".csv"))
-    rio::export(x=after_intervention,file=paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention",intervention_points[1],".csv"))
+    rio::export(x=before_intervention,file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention_",intervention_points[1],".csv"))
+    rio::export(x=after_intervention,file=paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention_",intervention_points[1],".csv"))
 
   }else if(length(seq_along(intervention_points))>1){
 
     for (i in seq_along(intervention_points)) {
       if (i==1){
         before_intervention[[i]] <- dplyr::filter(table_int, date < base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-          dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[i])) %>%
+          dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[i])) %>%
           dplyr::select(-intervention)
         after_intervention[[i]] <- dplyr::filter(table_int,date >= base::unique(na.omit(date[intervention==intervention_points[i]])) & date<base::unique(na.omit(date[intervention==intervention_points[i+1]]))) %>%
-          dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[i]))%>%
+          dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[i]))%>%
           dplyr::select(-intervention)
 
-        rio::export(x=before_intervention[[i]],file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention",intervention_points[i],".csv"))
-        rio::export(x=after_intervention[[i]],paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention",intervention_points[i],".csv"))
+        rio::export(x=before_intervention[[i]],file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention_",intervention_points[i],".csv"))
+        rio::export(x=after_intervention[[i]],paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention_",intervention_points[i],".csv"))
 
       } else if(i<max(length(seq_along(intervention_points)))){
         before_intervention[[i]] <- dplyr::filter(table_int, date > base::unique(na.omit(date[intervention==intervention_points[i-1]])) & date< base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-          dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[i]))%>%
+          dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[i]))%>%
           dplyr::select(-intervention)
         after_intervention[[i]] <- dplyr::filter(table_int,date >= base::unique(na.omit(date[intervention==intervention_points[i]])) & date<base::unique(na.omit(date[intervention==intervention_points[i+1]]))) %>%
-          dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[i]))%>%
+          dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[i]))%>%
           dplyr::select(-intervention)
 
-        rio::export(x=before_intervention[[i]],file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention",intervention_points[i],".csv"))
-        rio::export(x=after_intervention[[i]],paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention",intervention_points[i],".csv"))
+        rio::export(x=before_intervention[[i]],file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention_",intervention_points[i],".csv"))
+        rio::export(x=after_intervention[[i]],paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention_",intervention_points[i],".csv"))
 
       }else if(i==max(length(seq_along(intervention_points)))){
         before_intervention[[i]] <- dplyr::filter(table_int, date > base::unique(na.omit(date[intervention==intervention_points[i-1]])) & date< base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-        dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[i]))%>%
+        dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[i]))%>%
           dplyr::select(-intervention)
         after_intervention[[i]] <- dplyr::filter(table_int,date >= base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-          dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[i]))%>%
+          dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[i]))%>%
           dplyr::select(-intervention)
 
-        rio::export(x=before_intervention[[i]],file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention",intervention_points[i],".csv"))
-        rio::export(x=after_intervention[[i]],paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention",intervention_points[i],".csv"))
+        rio::export(x=before_intervention[[i]],file=paste0(outputdirectory,"data-before_interventions/",Id,"_beforeintervention_",intervention_points[i],".csv"))
+        rio::export(x=after_intervention[[i]],paste0(outputdirectory,"data-after_interventions/",Id,"_afterintervention_",intervention_points[i],".csv"))
       }
     }
 
@@ -143,10 +144,10 @@ for (f in 1:base::length(files)) {
       if (length(seq_along(intervention_points))==1) {
         # Before the first intervention
         before_intervention_all_patients[[j]] <- dplyr::filter(table_int_patient, date < base::unique(na.omit(date[intervention==intervention_points[1]])))%>%
-          dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[1])) %>%
+          dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[1])) %>%
           dplyr::select(-intervention)
         after_intervention_all_patients[[j]] <- dplyr::filter(table_int_patient,date >= base::unique(na.omit(date[intervention==intervention_points[1]])))%>%
-          dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[1])) %>%
+          dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[1])) %>%
           dplyr::select(-intervention)
       } else if(length(seq_along(intervention_points))>1) {
 
@@ -155,24 +156,24 @@ for (f in 1:base::length(files)) {
           # Between interventions
           if (i==1){
             before_intervention[[i]] <- dplyr::filter(table_int_patient, date < base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-              dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[i])) %>%
+              dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[i])) %>%
               dplyr::select(-intervention)
             after_intervention[[i]] <- dplyr::filter(table_int_patient,date >= base::unique(na.omit(date[intervention==intervention_points[i]])) & date<base::unique(na.omit(date[intervention==intervention_points[i+1]]))) %>%
-              dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[i]))%>%
+              dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[i]))%>%
               dplyr::select(-intervention)
           } else if(i<max(length(seq_along(intervention_points)))){
             before_intervention[[i]] <- dplyr::filter(table_int_patient, date > base::unique(na.omit(date[intervention==intervention_points[i-1]])) & date< base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-              dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[i]))%>%
+              dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[i]))%>%
               dplyr::select(-intervention)
             after_intervention[[i]] <- dplyr::filter(table_int_patient,date >= base::unique(na.omit(date[intervention==intervention_points[i]])) & date<base::unique(na.omit(date[intervention==intervention_points[i+1]]))) %>%
-              dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[i]))%>%
+              dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[i]))%>%
               dplyr::select(-intervention)
           }else if(i==max(length(seq_along(intervention_points)))){
             before_intervention[[i]] <- dplyr::filter(table_int_patient, date > base::unique(na.omit(date[intervention==intervention_points[i-1]])) & date< base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-              dplyr::mutate(id=paste0(id,"_beforeintervention",intervention_points[i]))%>%
+              dplyr::mutate(id=paste0(id,"_beforeintervention_",intervention_points[i]))%>%
               dplyr::select(-intervention)
             after_intervention[[i]] <- dplyr::filter(table_int_patient,date >= base::unique(na.omit(date[intervention==intervention_points[i]]))) %>%
-              dplyr::mutate(id=paste0(id,"_afterintervention",intervention_points[i]))%>%
+              dplyr::mutate(id=paste0(id,"_afterintervention_",intervention_points[i]))%>%
               dplyr::select(-intervention)
           }
         }
