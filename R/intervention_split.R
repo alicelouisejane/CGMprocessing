@@ -19,7 +19,11 @@
 #'
 #' @seealso
 #' analyseCGM and cleanCGM
-#'
+
+inputdirectory<-"/Users/alicecarr/Desktop/UofA/NormB/JordanR/data-clean_baseline/data-clean/"
+outputdirectory<-"/Users/alicecarr/Desktop/UofA/NormB/JordanR/data-clean_baseline_interventions/"
+interventionfile<-"/Users/alicecarr/Desktop/UofA/NormB/JordanR/intervention_splittingdates.xlsx"
+
 intervention_split <- function(inputdirectory,
                                aggregated=F,
                                outputdirectory,
@@ -77,7 +81,7 @@ for (f in 1:base::length(files)) {
   #merge table with interventions to find where to split
   table_int<-merge(table,intervention,all.x=T,by=c("id","date"))
 
-  table_int<-arrange(table_int,timestamp)
+  table_int<-dplyr::arrange(table_int,timestamp)
 
 
  if(aggregated==F){
