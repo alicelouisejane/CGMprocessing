@@ -41,13 +41,14 @@ if (aggregated == F) {
 base::dir.create(paste0(outputdirectory,"data-after_interventions/"), showWarnings = F)
 base::dir.create(paste0(outputdirectory,"data-before_interventions/"), showWarnings = F)
 #identify before intervention and after intervention
-before_intervention<-list()
-after_intervention<-list()
 before_intervention_all_patients<-list()
 after_intervention_all_patients<-list()
 #interventions are discrete, ie. if multiple interventions listed for 1 id time before will be before sequentional intervention but not including all time over other interventions
 
 for (f in 1:base::length(files)) {
+  before_intervention<-list()
+  after_intervention<-list()
+
   if (aggregated == F) {
     # id from filename (used only in dexcom and libre if device is other then this is irrelavent)
     Id <- tools::file_path_sans_ext(basename(files[f]))
