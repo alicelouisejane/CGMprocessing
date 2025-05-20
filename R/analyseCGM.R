@@ -28,12 +28,14 @@
 #'@param belowexcursionlength numeric for the time (in minutes) defined as an hypoglycemic exercusion
 #'  default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)
 #'
+#'@param specific_range_above Optional numeric for a specific glucose value you want evaluate the time above range for.
+#'
 #'@param magedef Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward
 #' of all glycemic excursions exceeding the threshold (standard deviation of blood glucose obtained from all blood glucose
-#' concentrations within 24-hour period). Default is 1 standarddevation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd")
-#' or other can be specifed as a numeric
+#' concentrations within 24-hour period). Default is 1 standard devation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd")
+#' or other can be specified as a numeric
 #'
-#'@param congan Specificing the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
+#'@param congan Specifying the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
 #' of all valid differences between a current observation and an observation (n) hours earlier
 #'
 #'@param format changes format to CGM variables as x or y in table. Default is "rows" making each ID a row
@@ -62,7 +64,7 @@
 #' @export
 #'
 #' @seealso
-#' cleanCGM and exercise_split
+#' cleanCGM exercise_split intervention_split
 #'
 #'
 
@@ -77,6 +79,7 @@ analyseCGM <- function(exercise = F,
                        outputname="CGMupload",
                        belowexcursionlength = 15,
                        aboveexcursionlength = 15,
+                       specific_range_above = NULL,
                        magedef = "1sd",
                        congan = 1,
                        format = "rows",
@@ -549,7 +552,7 @@ analyseCGM <- function(exercise = F,
         TRUE ~ 1
       ))
 
-    # perform run length encoding to find "true" excursions that are >35mins
+    # perform run length encoding to find "true" excursions that are >15mins
     BGover16 <- base::as.numeric(table16$BGover16, length = 1)
     BG16.rle <- base::rle(BGover16)
     over16loc <- base::matrix(nrow = 0, ncol = 3)
@@ -853,6 +856,13 @@ analyseCGM <- function(exercise = F,
     cgmupload["min_spent_over13", f] <- base::round(base::sum(BGinrange13) * (interval / 60), digits = 2)
     cgmupload["percent_time_over13", f] <- base::round(((base::sum(BGinrange13) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
 
+    if(!is.null(specific_range_above)){
+    # over specified value from specific_range argument
+    BGinrangesr <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))], length = 1)
+    BGinrangesr <- ifelse(BGinrangesr > as.numeric(specific_range_above), 1, 0)
+    cgmupload[paste0("min_spent_over",as.character(specific_range_above)), f] <- base::round(base::sum(specific_range_above) * (interval / 60), digits = 2)
+    cgmupload[paste0("percent_time_over",as.character(specific_range_above)), f] <- base::round(((base::sum(specific_range_above) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
+    }
 
     # total AUC
     sensorBG <- base::as.numeric(table$sensorglucose, length = 1)

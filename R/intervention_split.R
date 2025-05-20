@@ -20,10 +20,6 @@
 #' @seealso
 #' analyseCGM and cleanCGM
 
-inputdirectory<-"/Users/alicecarr/Desktop/UofA/NormB/JordanR/data-clean_baseline/data-clean/"
-outputdirectory<-"/Users/alicecarr/Desktop/UofA/NormB/JordanR/data-clean_baseline_interventions/"
-interventionfile<-"/Users/alicecarr/Desktop/UofA/NormB/JordanR/intervention_splittingdates.xlsx"
-
 intervention_split <- function(inputdirectory,
                                aggregated=F,
                                outputdirectory,

@@ -15,6 +15,7 @@ analyseCGM(
   outputname = "CGMupload",
   belowexcursionlength = 15,
   aboveexcursionlength = 15,
+  specific_range_above = NULL,
   magedef = "1sd",
   congan = 1,
   format = "rows",
@@ -47,12 +48,14 @@ default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)}
 \item{aboveexcursionlength}{numeric for the time (in minutes) defined as an hyperglycemic exercusion
 default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)}
 
+\item{specific_range_above}{Optional numeric for a specific glucose value you want evaluate the time above range for.}
+
 \item{magedef}{Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward
 of all glycemic excursions exceeding the threshold (standard deviation of blood glucose obtained from all blood glucose
-concentrations within 24-hour period). Default is 1 standarddevation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd")
-or other can be specifed as a numeric}
+concentrations within 24-hour period). Default is 1 standard devation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd")
+or other can be specified as a numeric}
 
-\item{congan}{Specificing the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
+\item{congan}{Specifying the n number of hours in CONGA(n). Default is the numeric 1. CONGA(n) represents the SD
 of all valid differences between a current observation and an observation (n) hours earlier}
 
 \item{format}{changes format to CGM variables as x or y in table. Default is "rows" making each ID a row}
@@ -66,7 +69,7 @@ A .csv file called by default CGMupload.csv containing CGM variables per each in
 This function function written to create consensus glycemic metrics based off definitions outlined International Consensus on Use of Continuous Glucose Monitoring. Ths function takes files of a certain structure as outlined in the README.
 }
 \seealso{
-cleanCGM and exercise_split
+cleanCGM exercise_split intervention_split
 }
 \author{
 Alice Carr
