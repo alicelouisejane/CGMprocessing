@@ -21,6 +21,7 @@
 #'
 #' @seealso
 #' analyseCGM and cleanCGM
+#'
 
 exercise_split <- function(inputdirectory,outputdirectory,exercisefile,hourspostexercise) {
 
@@ -120,6 +121,7 @@ exerciseinstance$pt_id<-as.character(exerciseinstance$pt_id)
       }
 
       filter_fin_00_06[[f]] <- dplyr::bind_rows(filter_ls_00_06)
+
 
 
       # filter to 24h post exercise
@@ -284,3 +286,4 @@ exerciseinstance$pt_id<-as.character(exerciseinstance$pt_id)
     }
 
 }
+

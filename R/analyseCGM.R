@@ -860,8 +860,8 @@ analyseCGM <- function(exercise = F,
     # over specified value from specific_range argument
     BGinrangesr <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))], length = 1)
     BGinrangesr <- ifelse(BGinrangesr > as.numeric(specific_range_above), 1, 0)
-    cgmupload[paste0("min_spent_over",as.character(specific_range_above)), f] <- base::round(base::sum(specific_range_above) * (interval / 60), digits = 2)
-    cgmupload[paste0("percent_time_over",as.character(specific_range_above)), f] <- base::round(((base::sum(specific_range_above) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
+    cgmupload[paste0("min_spent_over",as.character(specific_range_above)), f] <- base::round(base::sum(BGinrangesr) * (interval / 60), digits = 2)
+    cgmupload[paste0("percent_time_over",as.character(specific_range_above)), f] <- base::round(((base::sum(BGinrangesr) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
     }
 
     # total AUC
