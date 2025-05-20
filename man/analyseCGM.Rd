@@ -16,6 +16,7 @@ analyseCGM(
   belowexcursionlength = 15,
   aboveexcursionlength = 15,
   specific_range_above = NULL,
+  specific_range_below = NULL,
   magedef = "1sd",
   congan = 1,
   format = "rows",
@@ -49,6 +50,8 @@ default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)}
 default is 15 minutes (https://care.diabetesjournals.org/content/40/12/1631)}
 
 \item{specific_range_above}{Optional numeric for a specific glucose value you want evaluate the time above range for.}
+
+\item{specific_range_below}{Optional numeric for a specific glucose value you want evaluate the time below range for.}
 
 \item{magedef}{Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward
 of all glycemic excursions exceeding the threshold (standard deviation of blood glucose obtained from all blood glucose

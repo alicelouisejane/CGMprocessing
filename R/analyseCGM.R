@@ -30,6 +30,8 @@
 #'
 #'@param specific_range_above Optional numeric for a specific glucose value you want evaluate the time above range for.
 #'
+#'@param specific_range_below Optional numeric for a specific glucose value you want evaluate the time below range for.
+#'
 #'@param magedef Defining the threshold used in MAGE calculation.  MAGE is an arithmetic average of either the upward or downward
 #' of all glycemic excursions exceeding the threshold (standard deviation of blood glucose obtained from all blood glucose
 #' concentrations within 24-hour period). Default is 1 standard devation ("1sd"), options are 1.5 SD ("1.5sd") , 2 SD ("2sd")
@@ -80,6 +82,7 @@ analyseCGM <- function(exercise = F,
                        belowexcursionlength = 15,
                        aboveexcursionlength = 15,
                        specific_range_above = NULL,
+                       specific_range_below = NULL,
                        magedef = "1sd",
                        congan = 1,
                        format = "rows",
@@ -858,10 +861,18 @@ analyseCGM <- function(exercise = F,
 
     if(!is.null(specific_range_above)){
     # over specified value from specific_range argument
-    BGinrangesr <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))], length = 1)
-    BGinrangesr <- ifelse(BGinrangesr > as.numeric(specific_range_above), 1, 0)
-    cgmupload[paste0("min_spent_over",as.character(specific_range_above)), f] <- base::round(base::sum(BGinrangesr) * (interval / 60), digits = 2)
-    cgmupload[paste0("percent_time_over",as.character(specific_range_above)), f] <- base::round(((base::sum(BGinrangesr) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
+    BGinrangesra <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))], length = 1)
+    BGinrangesra <- ifelse(BGinrangesra > as.numeric(specific_range_above), 1, 0)
+    cgmupload[paste0("min_spent_over",as.character(specific_range_above)), f] <- base::round(base::sum(BGinrangesra) * (interval / 60), digits = 2)
+    cgmupload[paste0("percent_time_over",as.character(specific_range_above)), f] <- base::round(((base::sum(BGinrangesra) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
+    }
+
+    if(!is.null(specific_range_below)){
+      # over specified value from specific_range argument
+      BGinrangesrb <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))], length = 1)
+      BGinrangesrb <- ifelse(BGinrangesrb > as.numeric(specific_range_below), 1, 0)
+      cgmupload[paste0("min_spent_under",as.character(specific_range_below)), f] <- base::round(base::sum(BGinrangesrb) * (interval / 60), digits = 2)
+      cgmupload[paste0("percent_time_under",as.character(specific_range_below)), f] <- base::round(((base::sum(BGinrangesrb) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
     }
 
     # total AUC
