@@ -870,7 +870,7 @@ analyseCGM <- function(exercise = F,
     if(!is.null(specific_range_below)){
       # over specified value from specific_range argument
       BGinrangesrb <- base::as.numeric(table$sensorglucose[base::which(!is.na(table$sensorglucose))], length = 1)
-      BGinrangesrb <- ifelse(BGinrangesrb > as.numeric(specific_range_below), 1, 0)
+      BGinrangesrb <- ifelse(BGinrangesrb < as.numeric(specific_range_below), 1, 0)
       cgmupload[paste0("min_spent_under",as.character(specific_range_below)), f] <- base::round(base::sum(BGinrangesrb) * (interval / 60), digits = 2)
       cgmupload[paste0("percent_time_under",as.character(specific_range_below)), f] <- base::round(((base::sum(BGinrangesrb) * (interval / 60)) * 60 / totaltime) * 100, digits = 2)
     }
