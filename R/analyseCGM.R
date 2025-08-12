@@ -885,7 +885,6 @@ analyseCGM <- function(exercise = F,
 
     cgmupload["total_auc", f] <- base::round(aucs[base::length(sensorBG)], digits = 2)
 
-
     # Calculate MAGE
     # https://go.gale.com/ps/i.do?id=GALE%7CA252447314&sid=googleScholar&v=2.1&it=r&linkaccess=abs&issn=15209156&p=AONE&sw=w&userGroupName=loyoland_main
     # Smooth data using an exponentially weighted 9 point moving average, calculate SD of unsmoothed data.
@@ -906,8 +905,6 @@ analyseCGM <- function(exercise = F,
       # SD of the
       sd <- stats::sd(table$sensorglucose)
 
-
-
       tryCatch({
       # Identify turning points, peaks, and nadirs.
       tpoints <- pastecs::turnpoints(table$smoothed)
@@ -916,16 +913,20 @@ analyseCGM <- function(exercise = F,
       peaks <- base::which(tpointposition==1)
       pits <- base::which(tpointposition==-1)
 
-
+      if (is.null(tpoints) || is.na(tpoints$firstispeak)) {
+        cgmupload["r_mage", f] <- NA_real_
+        next
+      }
 
       # Calculate the difference between each nadir and its following peak. If the
       # data starts on a peak, remove it. Otherwise remove the final pit to create an even number of pits and peaks.
-      if (tpoints[["firstispeak"]] == TRUE && base::length(peaks) != base::length(pits)) {
-        peaks <- peaks[2:base::length(peaks)]
+       if (tpoints[["firstispeak"]] == TRUE && base::length(peaks) != base::length(pits)) {
+         peaks <- peaks[2:base::length(peaks)]
       } else if (tpoints[["firstispeak"]] == FALSE && base::length(peaks) != base::length(pits)) {
-        pits <- pits[1:(base::length(pits) - 1)]
-      }
-      differences <- table$sensorglucose[peaks] - table$sensorglucose[pits]
+         pits <- pits[1:(base::length(pits) - 1)]
+       }
+       differences <- table$sensorglucose[peaks] - table$sensorglucose[pits]
+
       # if differecen between adjacent turning points are < 1sd (usually 1 but can be others) then it is not a turning point,
       #if there are no turning points then MAGE will be NaN
       #MAGE is Na if there wasnt 12 hours of data for this? maybe
