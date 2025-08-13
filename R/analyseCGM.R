@@ -890,7 +890,7 @@ analyseCGM <- function(exercise = F,
     # Smooth data using an exponentially weighted 9 point moving average, calculate SD of unsmoothed data.
     #require 12 hours of data for this
     #if (base::round(base::length(table$sensorglucose) / (3600 / interval)) > 12 & !is.null(length(table$sensorglucose))) {
-    if (!is.null(length(table$sensorglucose))) {
+    if (length(table$sensorglucose)>=9) {
       table$smoothed <- base::as.numeric(zoo::rollapply(zoo::zoo(table$sensorglucose),
         9, function(x) {
           c(1, 2, 4, 8, 16, 8, 4, 2, 1) %*%
@@ -898,9 +898,10 @@ analyseCGM <- function(exercise = F,
         },
         fill = NA
       ))
+      # smoothing doesnt work on first and last 4 values so sub in for their mean
       table$smoothed[1:4] <- base::mean(stats::na.omit(table$sensorglucose[1:4]))
       table$smoothed[(base::length(table$smoothed) - 3):base::length(table$smoothed)] <- base::mean(table$sensorglucose[(base::length(table$sensorglucose) - 3):base::length(table$sensorglucose)])
-      # above is because smoothing doesnt work on first and last 4 values so sub in for their mean
+
 
       # SD of the
       sd <- stats::sd(table$sensorglucose)
@@ -943,6 +944,8 @@ analyseCGM <- function(exercise = F,
       }else {
         cgmupload["r_mage", f] <- base::round(base::mean(stats::na.omit(differences[base::which(differences > magedef)])), digits = 2)
       }
+    } else {
+      cgmupload["r_mage", f] <- NA_real_
     }
 
     # J-index:combination of information from mean and SD of all glucose values
