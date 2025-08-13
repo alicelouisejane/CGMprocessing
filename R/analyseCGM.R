@@ -902,7 +902,6 @@ analyseCGM <- function(exercise = F,
       table$smoothed[1:4] <- base::mean(stats::na.omit(table$sensorglucose[1:4]))
       table$smoothed[(base::length(table$smoothed) - 3):base::length(table$smoothed)] <- base::mean(table$sensorglucose[(base::length(table$sensorglucose) - 3):base::length(table$sensorglucose)])
 
-
       # SD of the
       sd <- stats::sd(table$sensorglucose)
 
