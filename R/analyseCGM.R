@@ -183,7 +183,7 @@ analyseCGM <- function(exercise = F,
     #define interval of readings
     interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp)))
     interval <- base::abs(interval)
-    if(fivemindata==F & interval==900){
+    if(fivemindata==F | interval==900){
       interval<- interval/3
       # all sensor readings ensure there are "5min readings" for the analyseCGM function.
 
