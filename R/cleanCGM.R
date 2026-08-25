@@ -52,14 +52,15 @@
 #' @seealso
 #' analyseCGM and exercise_split
 #'
+
 cleanCGM <- function(inputdirectory,
                      outputdirectory,
                      cgmdictionaryfile=NULL,
                      device = "other",
                      aggregated = F,
                      calibration = F,
-                     removerow = F,
-                     nrow = 3,
+                     removerow = F, # medtronic and libre needs to be T
+                     nrow = 3, # libre its 3 for medtronic its 7
                      expectedwear = "full",
                      saveplot = F) {
 
@@ -104,6 +105,9 @@ cleanCGM <- function(inputdirectory,
       # Id <- gsub("^([^_]+_[^_]+).*", "\\1", Id)
       print(Id)
       table <- base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
+
+
+
     } else if (device == "other" & aggregated == T) {
       table <- base::suppressWarnings(rio::import(files))
     }
@@ -132,7 +136,45 @@ cleanCGM <- function(inputdirectory,
       !!!stats::setNames(as.character(cgm_dict$new_vars), cgm_dict$old_vars)
     )
 
+    # Medtronic records Date and Time separately
+    if (grepl("medtronic", device, ignore.case = TRUE)) {
+
+      if (!all(c(
+        "medtronic_date",
+        "medtronic_time",
+        "sensorglucose"
+      ) %in% names(table))) {
+
+        stop(
+          paste(
+            "Required Medtronic Date, Time or Glucose columns are missing in:",
+            Id
+          )
+        )
+      }
+
+      table$timestamp <- paste(
+        table$medtronic_date,
+        table$medtronic_time
+      )
+
+      # Medtronic CareLink format is DD/MM/YYYY HH:MM:SS
+      table$timestamp <- as.POSIXct(
+        table$timestamp,
+        format = "%d/%m/%Y %H:%M:%S",
+        tz = "UTC"
+      )
+
+      # Medtronic export does not need a separate device-ID column
+      # for the subsequent cleaning steps
+      if (!"deviceid" %in% names(table)) {
+        table$deviceid <- Id
+      }
+    }
+
+
     anytime::addFormats("%d-%m-%Y %H:%M")
+    anytime::addFormats("%d-%m-%Y %H:%M:%S")
     # try to anticipate problematic dates
     if (is.character(table$timestamp)) {
       table$timestamp <- stringr::str_replace_all(table$timestamp, "T", " ")
@@ -151,10 +193,27 @@ cleanCGM <- function(inputdirectory,
 
 
     # keep only variables of interest
-    vars_to_keep <- dplyr::intersect(names(table), unique(cgm_dict$new_vars))
+    vars_to_keep <- dplyr::intersect(
+      names(table),
+      unique(
+        c(
+          cgm_dict$new_vars,
+          "timestamp",
+          "deviceid"
+        )
+      )
+    )
 
-    table <- dplyr::select(table, c(all_of(vars_to_keep)))
+    vars_to_keep <- setdiff(
+      vars_to_keep,
+      c("medtronic_date", "medtronic_time")
+    )
 
+
+    table <- dplyr::select(
+      table,
+      dplyr::all_of(vars_to_keep)
+    )
 
     # high and low limits from :
     # https://uk.provider.dexcom.com/sites/g/files/rrchkb126/files/document/2021-09/LBL017451%2BUsing%2BYour%2BG6%2C%2BG6%2C%2BUK%2C%2BEN%2C%2Bmmol_0.pdf
@@ -192,6 +251,27 @@ cleanCGM <- function(inputdirectory,
       # for plotting:
       sensormin <- 2.2
       sensormax <- 28
+    } else if (grepl("medtronic", device, ignore.case = TRUE)) {
+
+      table$sensorglucose <- as.character(table$sensorglucose)
+
+      # Medtronic reports glucose outside its reportable range
+      # as "Low" or "High"
+      base::suppressWarnings(
+        table <- table %>%
+          dplyr::mutate(
+            sensorglucose = dplyr::case_when(
+              trimws(tolower(sensorglucose)) == "low"  ~ "2.2",
+              trimws(tolower(sensorglucose)) == "high" ~ "22.2",
+              TRUE ~ sensorglucose
+            )
+          )
+      )
+
+      # plotting limits
+      sensormin <- 2.2
+      sensormax <- 24
+
     } else if (device == "other") {
       sensormin <- 2.2
       sensormax <- 28
@@ -221,15 +301,21 @@ cleanCGM <- function(inputdirectory,
     }
 
 
-    # find what the interval in the data is ie. 5min for dexcom 15 min for libre
-    interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp) / 60))
 
 
     # make sure glucose is numeric
     table$sensorglucose <-
       base::suppressWarnings(base::round(base::as.numeric(table$sensorglucose), digits = 2))
 
-    table <- dplyr::filter(table, !is.na(sensorglucose))
+    table <- table %>%
+      dplyr::filter(
+        !is.na(sensorglucose),
+        trimws(as.character(sensorglucose)) != ""
+      )
+
+    # find what the interval in the data is ie. 5min for dexcom 15 min for libre
+    interval <- pracma::Mode(base::diff(base::as.numeric(table$timestamp) / 60))
+
 
     # convert to mmol/l - if tests if glucose is mg/dl as would have higher max value than what would be max in mmol/l
     table$sensorglucose <- ifelse(table$sensorglucose>30,round(table$sensorglucose / 18, digits = 2),table$sensorglucose)
@@ -365,9 +451,10 @@ cleanCGM <- function(inputdirectory,
         summarize(totaltime=as.numeric(difftime(max(timestamp), min(timestamp), units = "min")))
 
       if(pracma::Mode(totaltime$totaltime)>expectedtime_mins*2){
-        warning(paste("The total time (or most prevalent total time for aggregated data) is more than double the expected days of wear entered of", unique(cgm_dict$expecteddaysofwear), "days. For calculation of percentage wear the expected time has been defaulted to be the total time of",pracma::Mode(totaltime$totaltime), "(mins)"))
-        expectedtime <- pracma::Mode(totaltime$totaltime)/60 #hours
-        expectedtime_mins <- pracma::Mode(totaltime$totaltime) # mins
+        warning(paste("The total time (or most prevalent total time for aggregated data) is more than double the expected days of wear entered of", unique(cgm_dict$expecteddaysofwear), "days."))
+        #remove this :# For calculation of percentage wear the expected time has been defaulted to be the total time of",pracma::Mode(totaltime$totaltime), "(mins)"))
+        #expectedtime <- pracma::Mode(totaltime$totaltime)/60 #hours
+        #expectedtime_mins <- pracma::Mode(totaltime$totaltime) # mins
       }
 
       if (nrow(gaptest) > 0) {
@@ -416,9 +503,10 @@ cleanCGM <- function(inputdirectory,
             select(id, percentage_expectedwear_overstudy) %>%
             unique() %>%
             base::merge(percentage_dropout, by = "id", all = T) %>%
+            base::merge(totaltime, by = "id", all = T) %>%
             mutate(totallosttime = ifelse(is.na(totallosttime), 0, totallosttime)) %>%
-            mutate(percentage_datacollected_overstudy = ((expectedtime_mins - totallosttime) / expectedtime_mins) * 100) %>%
-            mutate(percentage_dropout_overstudy = (totallosttime / expectedtime_mins) * 100) %>%
+            mutate(percentage_datacollected_overstudy = ((totaltime - totallosttime) / totaltime) * 100) %>%
+            mutate(percentage_dropout_overstudy = (totallosttime / totaltime) * 100) %>%
             merge(unique(select(table_interpolated,id,num_gaps_interpolated,minutes_interpolated)))
 
           data_collected_output[[f]] <- percentageexpectedwear
@@ -434,9 +522,10 @@ cleanCGM <- function(inputdirectory,
             select(id, percentage_expectedwear_overstudy) %>%
             unique() %>%
             base::merge(percentage_dropout, by = "id", all = T) %>%
+            base::merge(totaltime, by = "id", all = T) %>%
             mutate(totallosttime = ifelse(is.na(totallosttime), 0, totallosttime)) %>%
-            mutate(percentage_datacollected_overstudy = ((expectedtime_mins - totallosttime) / expectedtime_mins) * 100) %>%
-            mutate(percentage_dropout_overstudy = (totallosttime / expectedtime_mins) * 100) %>%
+            mutate(percentage_datacollected_overstudy = ((totaltime - totallosttime) / totaltime) * 100) %>%
+            mutate(percentage_dropout_overstudy = (totallosttime / totaltime) * 100) %>%
             mutate(num_gaps_interpolated=0,minutes_interpolated=0)
         }
 
