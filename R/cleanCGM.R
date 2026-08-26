@@ -52,14 +52,6 @@
 #' @seealso
 #' analyseCGM and exercise_split
 #'
-f=1
-inputdirectory="/Users/alicecarr/Desktop/JohnW_Sanofigrant/BETA2_newonset/Tural Cleaned CGM Studies/bandit/original/raw_cgm/libre/"
-outputdirectory="/Users/alicecarr/Desktop/JohnW_Sanofigrant/BETA2_newonset/Tural Cleaned CGM Studies/bandit/"
-cgmdictionaryfile="/Users/alicecarr/Desktop/CGMprocessing/inst/extdata/cgmvariable_dictionary.xlsx"
-device = "libre"
-removerow=T
-nrow=3
-
 cleanCGM <- function(inputdirectory,
                      outputdirectory,
                      cgmdictionaryfile=NULL,
