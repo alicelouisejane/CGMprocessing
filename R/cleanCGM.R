@@ -114,12 +114,35 @@ cleanCGM <- function(inputdirectory,
 
     # if dealing with some libre raw data there may be additional rows added,
     # if youre certain there arent then use FALSE otherwise TRUE can handle both ways
-    if (removerow == T & grepl("^V[0-9]$",names(table)[1])) { # this was causing some issues in the previous if call: & grepl("V[0-9]",names(table)[1])
-      names(table) <- table[nrow, ]
-      table <- table[-(1:nrow), ]
-    } else if (removerow == T | !grepl("V[0-9]", names(table)[1])) {
-      table <- table
-    } else if (removerow == F) {
+    # If metadata rows need removing but nrow was not supplied,
+    # ask the user where the metadata ends
+    if (removerow == TRUE && is.null(nrow)) {
+
+      if (interactive()) {
+
+        nrow <- as.integer(
+          readline(
+            prompt = "Enter the row number containing the true CGM column headers: "
+          )
+        )
+
+        if (is.na(nrow) || nrow < 1) {
+          stop("A valid positive row number must be entered for nrow.")
+        }
+
+      } else {
+        stop("removerow = TRUE but nrow was not supplied.")
+      }
+    }
+
+    # Remove metadata and use the specified row as column names
+    if (removerow == TRUE && !is.null(nrow)) {
+
+      names(table) <- as.character(unlist(table[nrow, ]))
+      table <- table[-seq_len(nrow), ]
+
+    } else if (removerow == FALSE) {
+
       table <- table
     }
 
