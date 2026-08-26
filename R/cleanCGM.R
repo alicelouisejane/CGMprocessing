@@ -103,7 +103,28 @@ cleanCGM <- function(inputdirectory,
       Id <- tools::file_path_sans_ext(basename(files[f]))
       # Id <- gsub("^([^_]+_[^_]+).*", "\\1", Id)
       print(Id)
-      table <- base::suppressWarnings(rio::import(files[f], guess_max = 10000000))
+      file_ext <- tolower(tools::file_ext(files[f]))
+
+      if (file_ext %in% c("xlsx", "xls")) {
+
+        # Read everything from Excel as text so dates/times are not
+        # automatically converted to R date/time classes
+        table <- base::suppressWarnings(
+          readxl::read_excel(
+            files[f],
+            col_types = "text"
+          )
+        )
+
+      } else {
+
+        table <- base::suppressWarnings(
+          rio::import(
+            files[f],
+            guess_max = 10000000
+          )
+        )
+      }
 
 
 
@@ -159,6 +180,7 @@ cleanCGM <- function(inputdirectory,
     )
 
     # Medtronic records Date and Time separately
+    # Medtronic records Date and Time separately
     if (grepl("medtronic", device, ignore.case = TRUE)) {
 
       if (!all(c(
@@ -175,36 +197,75 @@ cleanCGM <- function(inputdirectory,
         )
       }
 
-      table$timestamp <- paste(
+      # Check whether Date and Time have been imported as Excel serial numbers
+      date_num <- suppressWarnings(
+        as.numeric(as.character(table$medtronic_date))
+      )
+
+      time_num <- suppressWarnings(
+        as.numeric(as.character(table$medtronic_time))
+      )
+
+      excel_format <- !is.na(date_num) &
+        date_num > 20000 &
+        !is.na(time_num) &
+        time_num >= 0 &
+        time_num < 1
+
+      # Start with character Date + Time
+      timestamp_chr <- paste(
         table$medtronic_date,
         table$medtronic_time
       )
 
-      # Medtronic CareLink format is DD/MM/YYYY HH:MM:SS
+      # Parse normal Medtronic character dates
       table$timestamp <- as.POSIXct(
-        table$timestamp,
+        timestamp_chr,
         format = "%d/%m/%Y %H:%M:%S",
         tz = "UTC"
       )
 
-      # Medtronic export does not need a separate device-ID column
-      # for the subsequent cleaning steps
+      # Where Excel serial dates/times were found, overwrite with correct timestamp
+      table$timestamp[excel_format] <- as.POSIXct(
+        (date_num[excel_format] - 25569 + time_num[excel_format]) * 86400,
+        origin = "1970-01-01",
+        tz = "UTC"
+      )
+
       if (!"deviceid" %in% names(table)) {
         table$deviceid <- Id
       }
     }
 
 
-    anytime::addFormats("%d-%m-%Y %H:%M")
-    anytime::addFormats("%d-%m-%Y %H:%M:%S")
-    # try to anticipate problematic dates
-    if (is.character(table$timestamp)) {
-      table$timestamp <- stringr::str_replace_all(table$timestamp, "T", " ")
-      table$timestamp <- stringr::str_replace_all(table$timestamp, "/", "-")
-      #table$timestamp <- as.POSIXct(lubridate::parse_date_time(table$timestamp, orders = c("ymd_HMS", "dmyHMS", "dmyHM", "mdyHMS", "mdyHM")), tz = "UTC")
-      table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
-    } else if (!is.character(table$timestamp)) {
-      table$timestamp <- anytime::anytime(table$timestamp, tz = "UTC")
+    # Date handling for devices that already have a timestamp column
+    if (!grepl("medtronic", device, ignore.case = TRUE)) {
+
+      anytime::addFormats("%d-%m-%Y %H:%M")
+      anytime::addFormats("%d-%m-%Y %H:%M:%S")
+
+      if (is.character(table$timestamp)) {
+
+        table$timestamp <- stringr::str_replace_all(
+          table$timestamp, "T", " "
+        )
+
+        table$timestamp <- stringr::str_replace_all(
+          table$timestamp, "/", "-"
+        )
+
+        table$timestamp <- anytime::anytime(
+          table$timestamp,
+          tz = "UTC"
+        )
+
+      } else {
+
+        table$timestamp <- anytime::anytime(
+          table$timestamp,
+          tz = "UTC"
+        )
+      }
     }
 
 
