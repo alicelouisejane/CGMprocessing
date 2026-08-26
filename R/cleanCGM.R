@@ -180,7 +180,6 @@ cleanCGM <- function(inputdirectory,
     )
 
     # Medtronic records Date and Time separately
-    # Medtronic records Date and Time separately
     if (grepl("medtronic", device, ignore.case = TRUE)) {
 
       if (!all(c(
@@ -243,65 +242,49 @@ cleanCGM <- function(inputdirectory,
 
       x <- as.character(table$timestamp)
 
-      # Check whether dates are already year-first, e.g. 2024-01-31
-      if (any(grepl("^\\d{4}[-/]", x))) {
+      # Check for Excel serial date/time values
+      x_num <- suppressWarnings(as.numeric(x))
 
-        orders <- c(
-          "Ymd HMS",
-          "Ymd HM"
+      excel_datetime <- !is.na(x_num) &
+        x_num > 20000 &
+        x_num < 100000
+
+      # Initialise final timestamp
+      timestamp_num <- rep(NA_real_, length(x))
+
+      # Convert Excel serial datetime
+      timestamp_num[excel_datetime] <-
+        (x_num[excel_datetime] - 25569) * 86400
+
+      # For everything that is not an Excel serial timestamp,
+      # parse as a normal character datetime
+      if (any(!excel_datetime)) {
+
+        x_char <- x[!excel_datetime]
+
+        parsed_char <- suppressWarnings(
+          lubridate::parse_date_time2(
+            x_char,
+            orders = c(
+              "Ymd HMS",
+              "Ymd HM",
+              "dmY HMS",
+              "dmY HM",
+              "mdY HMS",
+              "mdY HM"
+            ),
+            tz = "UTC"
+          )
         )
 
-      } else {
-
-        # Pull out first two date components to distinguish DMY from MDY
-        date_parts <- stringr::str_match(
-          x,
-          "^(\\d{1,2})[-/](\\d{1,2})[-/]\\d{2,4}"
-        )
-
-        first_part  <- suppressWarnings(as.numeric(date_parts[, 2]))
-        second_part <- suppressWarnings(as.numeric(date_parts[, 3]))
-
-        # If first component >12 it must be day/month/year
-        if (any(first_part > 12, na.rm = TRUE)) {
-
-          orders <- c(
-            "dmY HMS",
-            "dmY HM"
-          )
-
-          # If second component >12 it must be month/day/year
-        } else if (any(second_part > 12, na.rm = TRUE)) {
-
-          orders <- c(
-            "mdY HMS",
-            "mdY HM"
-          )
-
-        } else {
-
-          # Entire file is ambiguous, default to day/month/year
-          warning(
-            paste(
-              "Date format is ambiguous in",
-              Id,
-              "- defaulting to day/month/year."
-            )
-          )
-
-          orders <- c(
-            "dmY HMS",
-            "dmY HM"
-          )
-        }
+        timestamp_num[!excel_datetime] <- as.numeric(parsed_char)
       }
 
-      table$timestamp <- suppressWarnings(
-        lubridate::parse_date_time2(
-          x,
-          orders = orders,
-          tz = "UTC"
-        )
+      # Convert everything to POSIXct
+      table$timestamp <- as.POSIXct(
+        timestamp_num,
+        origin = "1970-01-01",
+        tz = "UTC"
       )
     }
 
