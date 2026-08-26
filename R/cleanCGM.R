@@ -52,7 +52,6 @@
 #' @seealso
 #' analyseCGM and exercise_split
 #'
-
 cleanCGM <- function(inputdirectory,
                      outputdirectory,
                      cgmdictionaryfile=NULL,
