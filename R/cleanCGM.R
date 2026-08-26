@@ -52,6 +52,14 @@
 #' @seealso
 #' analyseCGM and exercise_split
 #'
+f=1
+inputdirectory="/Users/alicecarr/Desktop/JohnW_Sanofigrant/BETA2_newonset/Tural Cleaned CGM Studies/bandit/original/raw_cgm/libre/"
+outputdirectory="/Users/alicecarr/Desktop/JohnW_Sanofigrant/BETA2_newonset/Tural Cleaned CGM Studies/bandit/"
+cgmdictionaryfile="/Users/alicecarr/Desktop/CGMprocessing/inst/extdata/cgmvariable_dictionary.xlsx"
+device = "libre"
+removerow=T
+nrow=3
+
 cleanCGM <- function(inputdirectory,
                      outputdirectory,
                      cgmdictionaryfile=NULL,
@@ -241,31 +249,68 @@ cleanCGM <- function(inputdirectory,
     # Date handling for devices that already have a timestamp column
     if (!grepl("medtronic", device, ignore.case = TRUE)) {
 
-      anytime::addFormats("%d-%m-%Y %H:%M")
-      anytime::addFormats("%d-%m-%Y %H:%M:%S")
+      x <- as.character(table$timestamp)
 
-      if (is.character(table$timestamp)) {
+      # Check whether dates are already year-first, e.g. 2024-01-31
+      if (any(grepl("^\\d{4}[-/]", x))) {
 
-        table$timestamp <- stringr::str_replace_all(
-          table$timestamp, "T", " "
-        )
-
-        table$timestamp <- stringr::str_replace_all(
-          table$timestamp, "/", "-"
-        )
-
-        table$timestamp <- anytime::anytime(
-          table$timestamp,
-          tz = "UTC"
+        orders <- c(
+          "Ymd HMS",
+          "Ymd HM"
         )
 
       } else {
 
-        table$timestamp <- anytime::anytime(
-          table$timestamp,
+        # Pull out first two date components to distinguish DMY from MDY
+        date_parts <- stringr::str_match(
+          x,
+          "^(\\d{1,2})[-/](\\d{1,2})[-/]\\d{2,4}"
+        )
+
+        first_part  <- suppressWarnings(as.numeric(date_parts[, 2]))
+        second_part <- suppressWarnings(as.numeric(date_parts[, 3]))
+
+        # If first component >12 it must be day/month/year
+        if (any(first_part > 12, na.rm = TRUE)) {
+
+          orders <- c(
+            "dmY HMS",
+            "dmY HM"
+          )
+
+          # If second component >12 it must be month/day/year
+        } else if (any(second_part > 12, na.rm = TRUE)) {
+
+          orders <- c(
+            "mdY HMS",
+            "mdY HM"
+          )
+
+        } else {
+
+          # Entire file is ambiguous, default to day/month/year
+          warning(
+            paste(
+              "Date format is ambiguous in",
+              Id,
+              "- defaulting to day/month/year."
+            )
+          )
+
+          orders <- c(
+            "dmY HMS",
+            "dmY HM"
+          )
+        }
+      }
+
+      table$timestamp <- suppressWarnings(
+        lubridate::parse_date_time2(
+          x,
+          orders = orders,
           tz = "UTC"
         )
-      }
+      )
     }
 
 
